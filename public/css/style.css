@@ -1012,7 +1012,7 @@ textarea.form-control, textarea {
 }
 
 /* -------------------------------------------------------------
- * Print Mode Styling (@media print)
+ * Print Mode Styling (@media print) 
  * ----------------------------------------------------------- */
 @media print {
     .side, .sidebar, .top, .top-navbar, .alert, .form-filter, .act-btns, .btn-outline, .btn, .modal-backdrop {
