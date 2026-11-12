@@ -315,3 +315,7 @@ Output pengujian memvalidasi:
 
 ## Lisensi & Hak Penggunaan
 Sistem Informasi Akuntansi & Operasional Manufaktur dan Distribusi ini dikembangkan sebagai solusi perangkat lunak terintegrasi untuk mendukung otomasi tata kelola rantai pasok dan pelaporan keuangan perusahaan.
+
+
+
+tes Konek github- Dimas
