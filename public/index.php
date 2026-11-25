@@ -41,11 +41,23 @@ if ($page === 'login') {
 
         if (!empty($username) && !empty($password)) {
             if (loginUser($username, $password)) {
-                $user = currentUser();
-                $roleCode = $user['role_code'] ?? 'admin';
-                setFlash('success', 'Selamat datang kembali, ' . $user['full_name'] . '!');
-                header('Location: index.php?page=dashboard/' . urlencode($roleCode));
-                exit;
+            $user = currentUser();
+            $roleCode = $user['role_code'] ?? 'admin';
+
+            // Mapping role ke halaman dashboard
+            $dashboardRoutes = [
+                'admin'      => 'admin',
+                'finance'    => 'finance',
+                'pembelian'  => 'purchasing',
+                'purchasing' => 'purchasing',
+            ];
+
+            $dashboardPage = $dashboardRoutes[$roleCode] ?? 'dashboard';
+
+            setFlash('success', 'Selamat datang kembali, ' . $user['full_name'] . '!');
+
+            header('Location: index.php?page=dashboard/' . urlencode($dashboardPage));
+            exit;
             } else {
                 $loginError = 'Nama pengguna atau kata sandi tidak valid.';
             }
