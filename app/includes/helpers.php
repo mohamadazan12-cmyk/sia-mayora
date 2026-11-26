@@ -540,16 +540,17 @@ function getSystemNotificationCount($user = null) {
     }
 
     $db = getDbConnection();
-    $role = strtolower($user['role_code'] ?? $user['role_name'] ?? '');
+    $roleSource = !empty($user['role_code']) ? $user['role_code'] : ($user['role_name'] ?? '');
+    $role = strtolower(trim((string)$roleSource));
     $count = 0;
 
     try {
-        if (in_array($role, ['admin', 'administrator', 'manager', 'manajer', 'supervisor / manajer'])) {
+        if (in_array($role, ['admin', 'administrator', 'manager', 'manajer', 'supervisor / manajer', 'supervisor/manajer'])) {
             $mut = (int)$db->query("SELECT COUNT(*) FROM employee_mutations WHERE status = 'Menunggu'")->fetchColumn();
             $trn = (int)$db->query("SELECT COUNT(*) FROM employee_trainings WHERE status = 'Menunggu'")->fetchColumn();
             $trm = (int)$db->query("SELECT COUNT(*) FROM employee_terminations WHERE status = 'Menunggu Persetujuan'")->fetchColumn();
             $pay = (int)$db->query("SELECT COUNT(*) FROM payroll_records WHERE status IN ('draft', 'calculated')")->fetchColumn();
-            $pr  = (int)$db->query("SELECT COUNT(*) FROM purchase_requisitions WHERE status = 'submitted'")->fetchColumn();
+            $pr  = (int)$db->query("SELECT COUNT(*) FROM purchase_requisitions WHERE status = 'pending_approval'")->fetchColumn();
             $count = $mut + $trn + $trm + $pay + $pr;
         } elseif ($role === 'hr') {
             $lv  = (int)$db->query("SELECT COUNT(*) FROM leave_overtime_requests WHERE status = 'pending'")->fetchColumn();
@@ -559,11 +560,17 @@ function getSystemNotificationCount($user = null) {
             $pay = (int)$db->query("SELECT COUNT(*) FROM payroll_records WHERE status = 'verified'")->fetchColumn();
             $inv = (int)$db->query("SELECT COUNT(*) FROM supplier_invoices WHERE status = 'draft'")->fetchColumn();
             $count = $pay + $inv;
-        } elseif ($role === 'purchasing') {
+        } elseif ($role === 'purchasing' || $role === 'pembelian') {
             $pr = (int)$db->query("SELECT COUNT(*) FROM purchase_requisitions WHERE status = 'approved'")->fetchColumn();
             $count = $pr;
+        } elseif ($role === 'ppic' || $role === 'produksi') {
+            $po = (int)$db->query("SELECT COUNT(*) FROM production_orders WHERE status IN ('draft', 'pending_approval', 'approved', 'waiting_material')")->fetchColumn();
+            $count = $po;
+        } elseif ($role === 'penjualan') {
+            $so = (int)$db->query("SELECT COUNT(*) FROM sales_orders WHERE status IN ('draft', 'pending_approval')")->fetchColumn();
+            $count = $so;
         } elseif ($role === 'qc') {
-            $qc = (int)$db->query("SELECT COUNT(*) FROM qc_inspections WHERE status = 'inspecting'")->fetchColumn();
+            $qc = (int)$db->query("SELECT COUNT(*) FROM qc_inspections WHERE result = 'pending'")->fetchColumn();
             $count = $qc;
         } elseif ($role === 'gudang') {
             $gr = (int)$db->query("SELECT COUNT(*) FROM goods_receipts WHERE status = 'draft'")->fetchColumn();

@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 1. Save (Create or Update) Position
     if ($action === 'save_position') {
-        if (!hasRole(['Administrator', 'admin', 'hr', 'manager'])) {
+        if (!hasRole(['Administrator', 'admin', 'hr', 'manajer', 'manager'])) {
             setFlash('error', 'Anda tidak memiliki hak akses untuk mengubah data jabatan.');
             header('Location: index.php?page=master_data/positions');
             exit;
@@ -251,7 +251,7 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <!-- Add / Edit Form -->
-<?php if (hasRole(['Administrator', 'admin', 'hr', 'manager'])): ?>
+<?php if (hasRole(['Administrator', 'admin', 'hr', 'manajer', 'manager'])): ?>
 <div class="card mb-4">
     <details <?= $editPos ? 'open' : '' ?>>
         <summary style="cursor:pointer; padding:14px 18px; font-weight:600; font-size:14px; color:#111827; background:#f8fafc; border-radius:6px; list-style:none; display:flex; justify-content:space-between; align-items:center;">
@@ -371,7 +371,7 @@ include __DIR__ . '/../../includes/header.php';
                             </td>
                             <td class="text-center">
                                 <div class="btn-group">
-                                    <?php if (hasRole(['Administrator', 'admin', 'hr', 'manager'])): ?>
+                                    <?php if (hasRole(['Administrator', 'admin', 'hr', 'manajer', 'manager'])): ?>
                                         <a href="index.php?page=master_data/positions&edit_id=<?= $p['id'] ?>" class="btn btn-sm btn-outline-primary" title="Edit Jabatan">
                                             ✏️ Edit
                                         </a>

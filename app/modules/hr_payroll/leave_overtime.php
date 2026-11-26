@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_create_request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_decide_request'])) {
     requireCsrf();
 
-    if (!hasRole(['Administrator', 'HR / Payroll', 'Supervisor / Manajer', 'admin', 'hr', 'manager'])) {
+    if (!hasRole(['Administrator', 'HR/Payroll', 'HR / Payroll', 'Supervisor/Manajer', 'Supervisor / Manajer', 'admin', 'hr', 'manajer', 'manager'])) {
         setFlash('error', 'Hanya manajer atau tim HR yang berwenang memproses persetujuan cuti/lembur.');
         header('Location: index.php?page=hr_payroll/leave_overtime');
         exit;
@@ -204,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_cancel_request
         }
 
         // Check permission
-        $canCancel = hasRole(['Administrator', 'HR / Payroll', 'Supervisor / Manajer', 'admin', 'hr', 'manager']) || ($req['created_by'] == $user['id']);
+        $canCancel = hasRole(['Administrator', 'HR/Payroll', 'HR / Payroll', 'Supervisor/Manajer', 'Supervisor / Manajer', 'admin', 'hr', 'manajer', 'manager']) || ($req['created_by'] == $user['id']);
         if (!$canCancel) {
             throw new Exception('Anda tidak memiliki izin untuk membatalkan pengajuan ini.');
         }
@@ -507,7 +507,7 @@ include __DIR__ . '/../../includes/header.php';
                                         👁️ Detail
                                     </button>
 
-                                    <?php if ($req['status'] === 'pending' && hasRole(['Administrator', 'HR / Payroll', 'Supervisor / Manajer', 'admin', 'hr', 'manager'])): ?>
+                                    <?php if ($req['status'] === 'pending' && hasRole(['Administrator', 'HR/Payroll', 'HR / Payroll', 'Supervisor/Manajer', 'Supervisor / Manajer', 'admin', 'hr', 'manajer', 'manager'])): ?>
                                         <details style="display:inline-block; text-align:left;">
                                             <summary class="btn btn-sm btn-primary" style="cursor:pointer; list-style:none;">
                                                 Otorisasi &darr;
@@ -537,7 +537,7 @@ include __DIR__ . '/../../includes/header.php';
 
                                     <?php 
                                     $canCancelRow = in_array($req['status'], ['pending', 'approved']) && 
-                                                    (hasRole(['Administrator', 'HR / Payroll', 'Supervisor / Manajer', 'admin', 'hr', 'manager']) || $req['created_by'] == $user['id']);
+                                                    (hasRole(['Administrator', 'HR/Payroll', 'HR / Payroll', 'Supervisor/Manajer', 'Supervisor / Manajer', 'admin', 'hr', 'manajer', 'manager']) || $req['created_by'] == $user['id']);
                                     ?>
                                     <?php if ($canCancelRow): ?>
                                         <button type="button" class="btn btn-sm btn-danger" onclick="openCancelModal(<?= (int)$req['id'] ?>, '<?= htmlspecialchars(addslashes($req['request_number'])) ?>', '<?= htmlspecialchars(addslashes($req['employee_name'])) ?>', '<?= $req['status'] ?>', '<?= $req['request_type'] ?>')">

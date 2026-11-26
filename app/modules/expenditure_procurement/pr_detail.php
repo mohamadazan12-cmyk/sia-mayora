@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $reason = trim($_POST['approval_reason'] ?? '');
 
     // Authorization check: Only Manager or Admin can approve/reject
-    $canApprove = hasRole(['Supervisor / Manajer', 'Administrator', 'manager', 'admin']);
+    $canApprove = hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'manajer', 'manager', 'admin']);
 
     if (!$canApprove && in_array($action, ['approve', 'reject', 'revision'])) {
         setFlash('error', 'Anda tidak memiliki hak otorisasi untuk menyetujui atau menolak dokumen ini.');
@@ -282,7 +282,7 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <!-- Workflow Approval Section -->
-<?php if ($pr['status'] === 'pending_approval' && hasRole(['Supervisor / Manajer', 'Administrator', 'manager', 'admin'])): ?>
+<?php if ($pr['status'] === 'pending_approval' && hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'manajer', 'manager', 'admin'])): ?>
     <div class="card" style="border-left: 4px solid var(--warning);">
         <div class="card-header">
             <span class="card-title">Persetujuan Manajerial (Approval)</span>

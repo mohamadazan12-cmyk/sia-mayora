@@ -5,7 +5,19 @@
  */
 $page = $_GET['page'] ?? 'dashboard';
 $user = currentUser();
-$roleCode = $user['role_code'] ?? 'admin';
+$roleCode = strtolower($user['role_code'] ?? 'admin');
+
+// Normalize role code untuk dashboard URL (DB uses pembelian/produksi/manajer)
+$roleDashboardMap = [
+    'pembelian' => 'purchasing',
+    'produksi'  => 'ppic',
+    'manajer'   => 'manager',
+];
+$roleDashboardCode = $roleDashboardMap[$roleCode] ?? $roleCode;
+$validDashboards = ['admin', 'purchasing', 'ppic', 'penjualan', 'gudang', 'qc', 'finance', 'hr', 'manager'];
+$dashboardHref = in_array($roleDashboardCode, $validDashboards, true)
+    ? 'index.php?page=dashboard/' . urlencode($roleDashboardCode)
+    : 'index.php?page=dashboard';
 
 // Helper to determine if a menu link is active
 if (!function_exists('isNavActive')) {
@@ -28,7 +40,7 @@ if (!function_exists('isNavActive')) {
 
     <nav class="sidebar-nav" style="display:flex; flex-direction:column; gap:2px;">
         <!-- 1. Menu Dashboard (Selalu menjadi menu pertama) -->
-        <a href="index.php?page=dashboard" class="nav-item <?= isNavActive($page, 'dashboard') ? 'active on' : '' ?>">
+        <a href="<?= e($dashboardHref) ?>" class="nav-item <?= isNavActive($page, 'dashboard') ? 'active on' : '' ?>">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
             Dashboard
         </a>
@@ -176,7 +188,7 @@ if (!function_exists('isNavActive')) {
         <!-- ============================================================== -->
         <!-- SIDEBAR ROLE: PURCHASING / PETUGAS PENGADAAN -->
         <!-- ============================================================== -->
-        <?php elseif ($roleCode === 'purchasing'): ?>
+        <?php elseif ($roleCode === 'purchasing' || $roleCode === 'pembelian'): ?>
             <div class="smenu nav-section-title">PENGADAAN</div>
             <a href="index.php?page=expenditure_procurement/pr" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/pr') ? 'active on' : '' ?>">
                 &bull; PR Disetujui
@@ -199,7 +211,7 @@ if (!function_exists('isNavActive')) {
         <!-- ============================================================== -->
         <!-- SIDEBAR ROLE: PPIC / PERENCANA PRODUKSI -->
         <!-- ============================================================== -->
-        <?php elseif ($roleCode === 'ppic'): ?>
+        <?php elseif ($roleCode === 'ppic' || $roleCode === 'produksi'): ?>
             <div class="smenu nav-section-title">PRODUKSI &amp; PPIC</div>
             <a href="index.php?page=production/orders" class="nav-subitem <?= isNavActive($page, 'production/orders') ? 'active on' : '' ?>">
                 &bull; Perintah Produksi (SPK)
@@ -407,7 +419,7 @@ if (!function_exists('isNavActive')) {
         <!-- ============================================================== -->
         <!-- SIDEBAR ROLE: MANAGER / SUPERVISOR OPERASIONAL -->
         <!-- ============================================================== -->
-        <?php elseif ($roleCode === 'manager'): ?>
+        <?php elseif ($roleCode === 'manager' || $roleCode === 'manajer'): ?>
             <div class="smenu nav-section-title">OPERASIONAL UTAMA</div>
             <a href="index.php?page=receiving_sales/sales_orders" class="nav-subitem <?= isNavActive($page, 'receiving_sales/sales_orders') ? 'active on' : '' ?>">
                 &bull; Pesanan &amp; Sales Order

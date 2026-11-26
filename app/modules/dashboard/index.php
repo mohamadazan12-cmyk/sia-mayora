@@ -11,13 +11,16 @@ $roleCode = $user['role_code'] ?? 'admin';
 $dashboardMap = [
     'admin'      => 'admin',
     'purchasing' => 'purchasing',
+    'pembelian'  => 'purchasing',   // role_code DB = pembelian
     'ppic'       => 'ppic',
+    'produksi'   => 'ppic',         // role_code DB = produksi
     'penjualan'  => 'penjualan',
     'gudang'     => 'gudang',
     'qc'         => 'qc',
     'finance'    => 'finance',
     'hr'         => 'hr',
     'manager'    => 'manager',
+    'manajer'    => 'manager',      // role_code DB = manajer
 ];
 
 $target = $dashboardMap[$roleCode] ?? 'admin';

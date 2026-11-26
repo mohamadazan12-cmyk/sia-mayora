@@ -45,7 +45,7 @@ function hasRole($roles) {
     }
     $user = currentUser();
     // Admin has access to everything
-    if ($user['role_code'] === 'admin' || $user['role_name'] === 'Administrator') {
+    if (strcasecmp((string)$user['role_code'], 'admin') === 0 || strcasecmp((string)$user['role_name'], 'Administrator') === 0) {
         return true;
     }
 
@@ -53,8 +53,36 @@ function hasRole($roles) {
         $roles = [$roles];
     }
 
+    // Normalize equivalent DB role_code/role_name aliases without over-granting
+    $roleAliases = [
+        'pembelian'               => 'purchasing',
+        'purchasing'              => 'purchasing',
+        'petugas pembelian'       => 'purchasing',
+        'produksi'                => 'ppic',
+        'ppic'                    => 'ppic',
+        'petugas produksi'        => 'ppic',
+        'petugas produksi / ppic' => 'ppic',
+        'manajer'                 => 'manager',
+        'manager'                 => 'manager',
+        'supervisor/manajer'      => 'manager',
+        'supervisor / manajer'    => 'manager',
+    ];
+
+    $userCode = strtolower(trim((string)($user['role_code'] ?? '')));
+    $userName = strtolower(trim((string)($user['role_name'] ?? '')));
+    $userCanonicalCode = $roleAliases[$userCode] ?? $userCode;
+    $userCanonicalName = $roleAliases[$userName] ?? $userName;
+
     foreach ($roles as $role) {
-        if (strcasecmp($user['role_name'], $role) === 0 || strcasecmp($user['role_code'], $role) === 0) {
+        $target = strtolower(trim((string)$role));
+        $targetCanonical = $roleAliases[$target] ?? $target;
+
+        if (
+            $target === $userName ||
+            $target === $userCode ||
+            ($userCanonicalCode !== '' && $targetCanonical === $userCanonicalCode) ||
+            ($userCanonicalName !== '' && $targetCanonical === $userCanonicalName)
+        ) {
             return true;
         }
     }
@@ -207,14 +235,20 @@ function enforcePageAccess($page) {
         }
         // Specific dashboard subpage (e.g. dashboard/purchasing, dashboard/ppic)
         // Manager can view all operational dashboards
-        if ($roleCode === 'manager') {
+        if ($roleCode === 'manager' || $roleCode === 'manajer') {
             if ($subpage === 'admin') {
                 denyAccess($page, 'Hanya Administrator yang berwenang mengakses Dashboard Utama Perusahaan.');
             }
             return true;
         }
         // Staff role can only access their own dashboard
-        if ($subpage !== $roleCode) {
+        $roleToDashboard = [
+            'pembelian' => 'purchasing',
+            'produksi'  => 'ppic',
+            'manajer'   => 'manager',
+        ];
+        $expectedDashboard = $roleToDashboard[$roleCode] ?? $roleCode;
+        if ($subpage !== $expectedDashboard && $subpage !== $roleCode) {
             denyAccess($page, "Anda tidak memiliki hak akses untuk membuka dashboard departemen {$subpage}.");
         }
         return true;
@@ -226,13 +260,14 @@ function enforcePageAccess($page) {
     }
 
     // 3. Manager has access to all operational modules
-    if ($roleCode === 'manager') {
+    if ($roleCode === 'manager' || $roleCode === 'manajer') {
         return true;
     }
 
     // 4. Role-specific module rules for Staff
     switch ($roleCode) {
         case 'purchasing':
+        case 'pembelian':
             if ($module === 'expenditure_procurement') return true;
             if ($module === 'master_data' && in_array($subpage, ['suppliers', 'items', 'units', ''])) return true;
             if ($module === 'inventory' && in_array($subpage, ['stock', ''])) return true;
@@ -240,6 +275,7 @@ function enforcePageAccess($page) {
             break;
 
         case 'ppic':
+        case 'produksi':
             if ($module === 'production') return true;
             if ($module === 'master_data' && in_array($subpage, ['boms', 'items', 'units', ''])) return true;
             if ($module === 'inventory' && in_array($subpage, ['stock', ''])) return true;

@@ -14,7 +14,7 @@ $user = currentUser();
 
 // Handle Reversal Action (Finance & Admin only)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'reverse') {
-    requireRole(['Administrator', 'admin', 'Finance/Treasury', 'finance', 'Supervisor/Manajer', 'manajer']);
+    requireRole(['Administrator', 'admin', 'Finance/Treasury', 'finance', 'Supervisor/Manajer', 'Supervisor / Manajer', 'manajer', 'manager']);
     requireCsrf();
 
     $journalId = (int)($_POST['journal_id'] ?? 0);
@@ -299,7 +299,7 @@ include __DIR__ . '/../../includes/header.php';
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <?= getStatusBadge($j['status']) ?>
-                    <?php if ($j['status'] === 'posted' && hasRole(['Administrator', 'admin', 'Finance/Treasury', 'finance', 'Supervisor/Manajer', 'manajer'])): ?>
+                    <?php if ($j['status'] === 'posted' && hasRole(['Administrator', 'admin', 'Finance/Treasury', 'finance', 'Supervisor/Manajer', 'Supervisor / Manajer', 'manajer', 'manager'])): ?>
                         <button type="button" class="btn btn-danger btn-sm" onclick="openModal('modal-rev-jnl-<?= $j['id'] ?>')">
                             ↺ Balik Jurnal
                         </button>
@@ -382,7 +382,7 @@ include __DIR__ . '/../../includes/header.php';
 <!-- Modals for Journal Reversal outside cards -->
 <?php if (!empty($journals)): ?>
     <?php foreach ($journals as $j): ?>
-        <?php if ($j['status'] === 'posted' && hasRole(['Administrator', 'admin', 'Finance/Treasury', 'finance', 'Supervisor/Manajer', 'manajer'])): ?>
+        <?php if ($j['status'] === 'posted' && hasRole(['Administrator', 'admin', 'Finance/Treasury', 'finance', 'Supervisor/Manajer', 'Supervisor / Manajer', 'manajer', 'manager'])): ?>
             <div id="modal-rev-jnl-<?= $j['id'] ?>" class="modal-backdrop">
                 <div class="modal-dialog modal-sm">
                     <div class="modal-header" style="background:#fee2e2;">

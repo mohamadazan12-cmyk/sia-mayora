@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verify_finance'])) {
     $notes    = trim($_POST['verification_notes'] ?? 'Diverifikasi dan disetujui oleh Finance Manager');
 
     // Check authorization: Finance or Manager or Admin
-    if (!hasRole(['Finance/Treasury', 'Supervisor / Manajer', 'Administrator', 'finance', 'manager', 'admin'])) {
+    if (!hasRole(['Finance/Treasury', 'Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'finance', 'manajer', 'manager', 'admin'])) {
         setFlash('error', 'Hanya Manajer Keuangan / Supervisor yang berwenang memverifikasi laporan HPP produksi.');
         header('Location: index.php?page=production/hpp_summary&id=' . $targetId);
         exit;
@@ -240,7 +240,7 @@ include __DIR__ . '/../../includes/header.php';
         <div class="card-body">
             <?php if (empty($approvalHist)): ?>
                 <p>Finance Manager memvalidasi keabsahan data material issue, pencatatan waktu mesin, hasil kelulusan QC, dan kesesuaian formula HPP sebelum pembukuan diakui final.</p>
-                <?php if (hasRole(['Finance/Treasury', 'Supervisor / Manajer', 'Administrator', 'finance', 'manager', 'admin'])): ?>
+                <?php if (hasRole(['Finance/Treasury', 'Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'finance', 'manajer', 'manager', 'admin'])): ?>
                     <form action="index.php?page=production/hpp_summary&id=<?= $activePdo['id'] ?>" method="POST" style="margin-top: 14px;">
                         <?= csrfField() ?>
                         <input type="hidden" name="production_order_id" value="<?= $activePdo['id'] ?>">

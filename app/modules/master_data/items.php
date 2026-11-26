@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 1. Save Item (Create or Update)
     if ($action === 'save_item') {
-        if (!hasRole(['Administrator', 'admin', 'gudang', 'purchasing', 'ppic'])) {
+        if (!hasRole(['Administrator', 'admin', 'gudang', 'pembelian', 'purchasing', 'produksi', 'ppic'])) {
             setFlash('error', 'Anda tidak memiliki hak akses untuk mengubah data barang.');
             header('Location: index.php?page=master_data/items');
             exit;
@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 2. Toggle Status
     if ($action === 'toggle_status') {
-        if (!hasRole(['Administrator', 'admin', 'gudang', 'purchasing'])) {
+        if (!hasRole(['Administrator', 'admin', 'gudang', 'pembelian', 'purchasing'])) {
             setFlash('error', 'Akses ditolak.');
             header('Location: index.php?page=master_data/items');
             exit;
@@ -310,7 +310,7 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <!-- Add / Edit Collapsible Form -->
-<?php if (hasRole(['Administrator', 'admin', 'gudang', 'purchasing', 'ppic'])): ?>
+<?php if (hasRole(['Administrator', 'admin', 'gudang', 'pembelian', 'purchasing', 'produksi', 'ppic'])): ?>
 <div class="card mb-4">
     <details <?= $editItem ? 'open' : '' ?>>
         <summary style="cursor:pointer; padding:15px 20px; font-weight:600; font-size:15px; color:#0284c7; background:#f8fafc; border-radius:6px; list-style:none; display:flex; justify-content:space-between; align-items:center;">
@@ -500,7 +500,7 @@ include __DIR__ . '/../../includes/header.php';
                                     </button>
 
                                     <!-- Edit Trigger -->
-                                    <?php if (hasRole(['Administrator', 'admin', 'gudang', 'purchasing', 'ppic'])): ?>
+                                    <?php if (hasRole(['Administrator', 'admin', 'gudang', 'pembelian', 'purchasing', 'produksi', 'ppic'])): ?>
                                         <a href="index.php?page=master_data/items&edit_id=<?= $it['id'] ?>" class="btn btn-sm btn-outline-primary" title="Edit Data Barang">
                                             ✏️ Edit
                                         </a>
@@ -639,7 +639,7 @@ include __DIR__ . '/../../includes/header.php';
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-modal-close>Tutup</button>
-                    <?php if (hasRole(['Administrator', 'admin', 'gudang', 'purchasing', 'ppic'])): ?>
+                    <?php if (hasRole(['Administrator', 'admin', 'gudang', 'pembelian', 'purchasing', 'produksi', 'ppic'])): ?>
                         <a href="index.php?page=master_data/items&edit_id=<?= $it['id'] ?>" class="btn btn-primary">✏️ Edit Barang Ini</a>
                     <?php endif; ?>
                 </div>

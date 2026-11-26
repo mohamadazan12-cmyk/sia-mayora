@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 1. Save (Create or Update) Unit
     if ($action === 'save_unit') {
-        if (!hasRole(['Administrator', 'admin', 'purchasing', 'gudang', 'ppic'])) {
+        if (!hasRole(['Administrator', 'admin', 'pembelian', 'purchasing', 'gudang', 'produksi', 'ppic'])) {
             setFlash('error', 'Anda tidak memiliki hak akses untuk mengubah data satuan.');
             header('Location: index.php?page=master_data/units');
             exit;
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 2. Toggle Status
     if ($action === 'toggle_status') {
-        if (!hasRole(['Administrator', 'admin', 'purchasing', 'gudang'])) {
+        if (!hasRole(['Administrator', 'admin', 'pembelian', 'purchasing', 'gudang'])) {
             setFlash('error', 'Akses ditolak.');
             header('Location: index.php?page=master_data/units');
             exit;
@@ -239,7 +239,7 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <!-- Add / Edit Form -->
-<?php if (hasRole(['Administrator', 'admin', 'purchasing', 'gudang', 'ppic'])): ?>
+<?php if (hasRole(['Administrator', 'admin', 'pembelian', 'purchasing', 'gudang', 'produksi', 'ppic'])): ?>
 <div class="card mb-4">
     <details <?= $editUnit ? 'open' : '' ?>>
         <summary style="cursor:pointer; padding:14px 18px; font-weight:600; font-size:14px; color:#111827; background:#f8fafc; border-radius:6px; list-style:none; display:flex; justify-content:space-between; align-items:center;">
@@ -336,7 +336,7 @@ include __DIR__ . '/../../includes/header.php';
                             </td>
                             <td class="text-center">
                                 <div class="btn-group">
-                                    <?php if (hasRole(['Administrator', 'admin', 'purchasing', 'gudang', 'ppic'])): ?>
+                                    <?php if (hasRole(['Administrator', 'admin', 'pembelian', 'purchasing', 'gudang', 'produksi', 'ppic'])): ?>
                                         <a href="index.php?page=master_data/units&edit_id=<?= $u['id'] ?>" class="btn btn-sm btn-outline-primary" title="Edit Satuan">
                                             ✏️ Edit
                                         </a>

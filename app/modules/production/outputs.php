@@ -152,7 +152,11 @@ include __DIR__ . '/../../includes/header.php';
         <div class="page-subtitle">Siklus Produksi &bull; Pemisahan Ketat Barang Jadi Siap Jual vs Produk Gagal / Afkir</div>
     </div>
     <div class="page-actions">
-        <a href="index.php?page=production/orders" class="btn btn-secondary">&laquo; Kembali ke SPK</a>
+        <?php if (hasRole(['Administrator', 'admin', 'Supervisor/Manajer', 'Supervisor / Manajer', 'manajer', 'manager', 'Petugas Produksi', 'produksi', 'ppic'])): ?>
+            <a href="index.php?page=production/orders" class="btn btn-secondary">&laquo; Kembali ke SPK</a>
+        <?php else: ?>
+            <a href="index.php?page=dashboard" class="btn btn-secondary">&laquo; Kembali ke Dashboard</a>
+        <?php endif; ?>
     </div>
 </div>
 

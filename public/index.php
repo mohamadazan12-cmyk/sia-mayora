@@ -48,15 +48,25 @@ if ($page === 'login') {
             $dashboardRoutes = [
                 'admin'      => 'admin',
                 'finance'    => 'finance',
-                'pembelian'  => 'purchasing',
-                'purchasing' => 'purchasing',
+                'pembelian'  => 'purchasing',   // role_code DB = pembelian
+                'purchasing' => 'purchasing',   // fallback jika username=purchasing
+                'produksi'   => 'ppic',         // role_code DB = produksi (Petugas Produksi/PPIC)
+                'ppic'       => 'ppic',         // fallback
+                'penjualan'  => 'penjualan',
+                'gudang'     => 'gudang',
+                'qc'         => 'qc',
+                'hr'         => 'hr',
+                'manajer'    => 'manager',      // role_code DB = manajer
+                'manager'    => 'manager',      // fallback
             ];
-
-            $dashboardPage = $dashboardRoutes[$roleCode] ?? 'dashboard';
 
             setFlash('success', 'Selamat datang kembali, ' . $user['full_name'] . '!');
 
-            header('Location: index.php?page=dashboard/' . urlencode($dashboardPage));
+            if (isset($dashboardRoutes[$roleCode])) {
+                header('Location: index.php?page=dashboard/' . urlencode($dashboardRoutes[$roleCode]));
+            } else {
+                header('Location: index.php?page=dashboard');
+            }
             exit;
             } else {
                 $loginError = 'Nama pengguna atau kata sandi tidak valid.';

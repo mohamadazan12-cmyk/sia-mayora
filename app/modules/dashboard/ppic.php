@@ -5,7 +5,7 @@
  * Sesuai Acuan Desain Visual Prototype HTML Mayora
  */
 
-requireRole(['Administrator', 'admin', 'Petugas Produksi / PPIC', 'ppic', 'Supervisor / Manajer', 'manager', 'manajer']);
+requireRole(['Administrator', 'admin', 'Petugas Produksi', 'Petugas Produksi / PPIC', 'produksi', 'ppic', 'Supervisor / Manajer', 'manager', 'manajer']);
 
 $db = getDbConnection();
 $user = currentUser();

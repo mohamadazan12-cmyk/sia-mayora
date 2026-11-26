@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_payroll_approv
 
         if ($decision === 'approved') {
             if ($step === 'finance') {
-                if (!hasRole(['Administrator', 'Finance/Treasury', 'Supervisor / Manajer', 'admin', 'finance', 'manager'])) {
+                if (!hasRole(['Administrator', 'Finance/Treasury', 'Supervisor/Manajer', 'Supervisor / Manajer', 'admin', 'finance', 'manajer', 'manager'])) {
                     throw new Exception('Hanya Finance Manager atau Direksi yang berwenang menyetujui anggaran gaji.');
                 }
 
@@ -186,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_payroll_approv
 
                 setFlash('success', "Transfer payroll {$period['period_code']} sebesar " . formatRupiah($totalNet) . " berhasil dikonfirmasi! Slip gaji untuk " . count($empRecords) . " karyawan telah diterbitkan.");
             } elseif ($step === 'reverse') {
-                if (!hasRole(['Administrator', 'Finance/Treasury', 'Supervisor / Manajer', 'admin', 'finance', 'manager'])) {
+                if (!hasRole(['Administrator', 'Finance/Treasury', 'Supervisor/Manajer', 'Supervisor / Manajer', 'admin', 'finance', 'manajer', 'manager'])) {
                     throw new Exception('Hanya bagian Keuangan / Finance Manager yang berwenang membatalkan persetujuan payroll.');
                 }
 
@@ -294,9 +294,15 @@ include __DIR__ . '/../../includes/header.php';
         <div class="page-subtitle">Siklus SDM &bull; Verifikasi Bertingkat: Verifikasi HR &rarr; Persetujuan Finance Manager &rarr; Konfirmasi Transfer Bank Mandiri</div>
     </div>
     <div class="page-actions">
-        <a href="index.php?page=hr_payroll/payroll" class="btn btn-secondary">
-            &larr; Kembali ke Engine Payroll
-        </a>
+        <?php if (hasRole(['Administrator', 'admin', 'HR/Payroll', 'HR / Payroll', 'hr', 'Supervisor/Manajer', 'Supervisor / Manajer', 'manajer', 'manager'])): ?>
+            <a href="index.php?page=hr_payroll/payroll" class="btn btn-secondary">
+                &larr; Kembali ke Engine Payroll
+            </a>
+        <?php else: ?>
+            <a href="index.php?page=dashboard" class="btn btn-secondary">
+                &larr; Kembali ke Dashboard
+            </a>
+        <?php endif; ?>
     </div>
 </div>
 

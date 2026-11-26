@@ -345,7 +345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_period'
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_reverse_approval'])) {
     requireCsrf();
 
-    if (!hasRole(['Administrator', 'Finance/Treasury', 'Supervisor / Manajer', 'admin', 'finance', 'manager'])) {
+    if (!hasRole(['Administrator', 'Finance/Treasury', 'Supervisor/Manajer', 'Supervisor / Manajer', 'admin', 'finance', 'manajer', 'manager'])) {
         setFlash('error', 'Akses ditolak: Hanya bagian Finance atau Administrator yang berwenang membatalkan persetujuan payroll.');
         header('Location: index.php?page=hr_payroll/payroll');
         exit;
@@ -612,7 +612,7 @@ include __DIR__ . '/../../includes/header.php';
                     </form>
                 <?php endif; ?>
 
-                <?php if ($selectedPeriod['status'] === 'approved' && hasRole(['Administrator', 'Finance/Treasury', 'Supervisor / Manajer', 'admin', 'finance', 'manager'])): ?>
+                <?php if ($selectedPeriod['status'] === 'approved' && hasRole(['Administrator', 'Finance/Treasury', 'Supervisor/Manajer', 'Supervisor / Manajer', 'admin', 'finance', 'manajer', 'manager'])): ?>
                     <button type="button" class="btn btn-danger" onclick="openReverseApprovalModal(<?= $selectedPeriod['id'] ?>, '<?= htmlspecialchars(addslashes($selectedPeriod['period_code'])) ?>')">
                         ↩️ Batalkan Persetujuan (Reversal)
                     </button>

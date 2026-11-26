@@ -20,7 +20,7 @@ $stmtUserEmp->execute([':uid' => $user['id']]);
 $userEmployeeId = (int)$stmtUserEmp->fetchColumn();
 
 // Role Check: Can user view all payslips?
-$canViewAll = hasRole(['Administrator', 'HR / Payroll', 'Finance/Treasury', 'Supervisor / Manajer', 'admin', 'hr', 'finance', 'manager']);
+$canViewAll = hasRole(['Administrator', 'HR/Payroll', 'HR / Payroll', 'Finance/Treasury', 'Supervisor/Manajer', 'Supervisor / Manajer', 'admin', 'hr', 'finance', 'manajer', 'manager']);
 
 // Fetch Payslips List with RBAC enforcement
 $where = ['1=1'];

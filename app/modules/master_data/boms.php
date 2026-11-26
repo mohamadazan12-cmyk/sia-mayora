@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 1. Save (Create or Update) BOM Header
     if ($action === 'save_bom') {
-        if (!hasRole(['Administrator', 'admin', 'ppic'])) {
+        if (!hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])) {
             setFlash('error', 'Akses ditolak.');
             header('Location: index.php?page=master_data/boms');
             exit;
@@ -129,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 2. Toggle BOM Status (Active / Inactive)
     if ($action === 'toggle_bom_status') {
-        if (!hasRole(['Administrator', 'admin', 'ppic'])) {
+        if (!hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])) {
             setFlash('error', 'Akses ditolak.');
             header('Location: index.php?page=master_data/boms');
             exit;
@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 3. Delete BOM
     if ($action === 'delete_bom') {
-        if (!hasRole(['Administrator', 'admin', 'ppic'])) {
+        if (!hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])) {
             setFlash('error', 'Hanya Administrator dan PPIC yang berwenang menghapus formula BOM.');
             header('Location: index.php?page=master_data/boms');
             exit;
@@ -214,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 4. Add BOM Component Item
     if ($action === 'add_bom_item') {
-        if (!hasRole(['Administrator', 'admin', 'ppic'])) {
+        if (!hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])) {
             setFlash('error', 'Akses ditolak.');
             header('Location: index.php?page=master_data/boms');
             exit;
@@ -260,7 +260,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 5. Update BOM Component Item
     if ($action === 'update_bom_item') {
-        if (!hasRole(['Administrator', 'admin', 'ppic'])) {
+        if (!hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])) {
             setFlash('error', 'Akses ditolak.');
             header('Location: index.php?page=master_data/boms');
             exit;
@@ -302,7 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 6. Delete BOM Component Item
     if ($action === 'delete_bom_item') {
-        if (!hasRole(['Administrator', 'admin', 'ppic'])) {
+        if (!hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])) {
             setFlash('error', 'Akses ditolak.');
             header('Location: index.php?page=master_data/boms');
             exit;
@@ -417,7 +417,7 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <!-- Add / Edit BOM Header Collapsible -->
-<?php if (hasRole(['Administrator', 'admin', 'ppic'])): ?>
+<?php if (hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])): ?>
 <div class="card mb-4">
     <details <?= $editBom ? 'open' : '' ?>>
         <summary style="cursor:pointer; padding:15px 20px; font-weight:600; font-size:15px; color:#0284c7; background:#f8fafc; border-radius:6px; list-style:none; display:flex; justify-content:space-between; align-items:center;">
@@ -533,7 +533,7 @@ include __DIR__ . '/../../includes/header.php';
                     <div style="display:flex; align-items:center; gap:8px;">
                         <?= $selectedBom['is_active'] ? '<span class="badge badge-success">Aktif</span>' : '<span class="badge badge-danger">Non-Aktif</span>' ?>
 
-                        <?php if (hasRole(['Administrator', 'admin', 'ppic'])): ?>
+                        <?php if (hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])): ?>
                             <a href="index.php?page=master_data/boms&edit_bom_id=<?= $selectedBom['id'] ?>" class="btn btn-sm btn-outline-primary" title="Edit Formula Header">
                                 ✏️ Edit
                             </a>
@@ -598,7 +598,7 @@ include __DIR__ . '/../../includes/header.php';
                                             <td class="text-right font-medium"><?= formatRupiah($cost) ?></td>
                                             <td><?= e($bc['notes'] ?: '-') ?></td>
                                             <td class="text-center">
-                                                <?php if (hasRole(['Administrator', 'admin', 'ppic'])): ?>
+                                                <?php if (hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])): ?>
                                                     <div class="btn-group">
                                                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="openModal('modal-edit-bom-item-<?= $bc['id'] ?>')" title="Edit Kebutuhan">
                                                             ✏️
@@ -635,7 +635,7 @@ include __DIR__ . '/../../includes/header.php';
                 </div>
 
                 <!-- Add Material Form -->
-                <?php if (hasRole(['Administrator', 'admin', 'ppic'])): ?>
+                <?php if (hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])): ?>
                     <div class="card-footer" style="padding:15px 20px; background:#f8fafc; border-top:1px solid #e2e8f0;">
                         <h4 style="margin:0 0 10px 0; font-size:13px; color:#475569;">+ Tambah Komponen Material ke Formula BOM</h4>
                         <form action="index.php?page=master_data/boms&id=<?= $selectedBomId ?>" method="POST" style="display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:10px; align-items:flex-end;">
@@ -668,7 +668,7 @@ include __DIR__ . '/../../includes/header.php';
             </div>
 
             <!-- Modal Delete BOM Confirmation -->
-            <?php if (hasRole(['Administrator', 'admin', 'ppic'])): ?>
+            <?php if (hasRole(['Administrator', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])): ?>
                 <?php if (!empty($bomComponents)): ?>
                     <?php foreach ($bomComponents as $bc): ?>
                         <!-- Modal Edit BOM Item -->

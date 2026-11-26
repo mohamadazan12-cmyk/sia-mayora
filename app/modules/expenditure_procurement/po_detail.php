@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         if ($action === 'approve_po' && $po['status'] === 'draft') {
-            if (!hasRole(['Supervisor / Manajer', 'Administrator', 'manager', 'admin', 'purchasing'])) {
+            if (!hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'manajer', 'manager', 'admin', 'Petugas Pembelian', 'pembelian', 'purchasing'])) {
                 throw new Exception("Anda tidak memiliki hak otorisasi untuk menerbitkan PO.");
             }
 
@@ -183,7 +183,7 @@ include __DIR__ . '/../../includes/header.php';
         <a href="index.php?page=expenditure_procurement/po" class="btn btn-secondary">&laquo; Kembali</a>
         
         <?php if ($po['status'] === 'draft'): ?>
-            <?php if (hasRole(['Supervisor / Manajer', 'Administrator', 'manager', 'admin', 'purchasing'])): ?>
+            <?php if (hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'manajer', 'manager', 'admin', 'Petugas Pembelian', 'pembelian', 'purchasing'])): ?>
                 <form action="index.php?page=expenditure_procurement/po_detail&id=<?= $poId ?>" method="POST" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menyetujui dan menerbitkan Pesanan Pembelian <?= e($po['po_number']) ?>?');">
                     <?= csrfField() ?>
                     <input type="hidden" name="action" value="approve_po">

@@ -14,7 +14,7 @@ $user = currentUser();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'void_payment') {
     requireCsrf();
 
-    $canVoid = hasRole(['Supervisor / Manajer', 'Administrator', 'Finance/Treasury', 'manager', 'admin', 'finance']);
+    $canVoid = hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'Finance/Treasury', 'manajer', 'manager', 'admin', 'finance']);
     if (!$canVoid) {
         setFlash('error', 'Anda tidak memiliki hak otorisasi untuk membatalkan pembayaran pemasok.');
         header('Location: index.php?page=expenditure_procurement/payments');

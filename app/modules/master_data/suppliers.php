@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 1. Save (Create or Update) Supplier
     // -------------------------------------------------------------------------
     if ($action === 'save_supplier') {
-        if (!hasRole(['Administrator', 'admin', 'purchasing', 'finance'])) {
+        if (!hasRole(['Administrator', 'admin', 'pembelian', 'purchasing', 'finance'])) {
             setFlash('error', 'Anda tidak memiliki hak akses untuk mengubah data pemasok.');
             header('Location: index.php?page=master_data/suppliers');
             exit;
@@ -165,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 2. Toggle Active Status (Deactivate / Activate)
     // -------------------------------------------------------------------------
     if ($action === 'toggle_status') {
-        if (!hasRole(['Administrator', 'admin', 'purchasing', 'finance'])) {
+        if (!hasRole(['Administrator', 'admin', 'pembelian', 'purchasing', 'finance'])) {
             setFlash('error', 'Akses ditolak: Anda tidak memiliki hak akses mengubah status pemasok.');
             header('Location: index.php?page=master_data/suppliers');
             exit;
@@ -199,7 +199,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 3. Delete Supplier (Hard delete only if unreferenced)
     // -------------------------------------------------------------------------
     if ($action === 'delete_supplier') {
-        if (!hasRole(['Administrator', 'admin', 'purchasing'])) {
+        if (!hasRole(['Administrator', 'admin', 'pembelian', 'purchasing'])) {
             setFlash('error', 'Hanya Administrator dan Bagian Pembelian yang berwenang menghapus data pemasok.');
             header('Location: index.php?page=master_data/suppliers');
             exit;
@@ -418,7 +418,7 @@ include __DIR__ . '/../../includes/header.php';
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
             <?= $detailSupp['is_active'] ? '<span class="bd ok">Aktif</span>' : '<span class="bd no">Non-Aktif</span>' ?>
-            <?php if (hasRole(['Administrator', 'admin', 'purchasing', 'finance'])): ?>
+            <?php if (hasRole(['Administrator', 'admin', 'pembelian', 'purchasing', 'finance'])): ?>
                 <a href="index.php?page=master_data/suppliers&edit_id=<?= $detailSupp['id'] ?>" class="btn btn-sm btn-primary">✏️ Edit Pemasok Ini</a>
             <?php endif; ?>
             <a href="index.php?page=master_data/suppliers" class="btn btn-sm btn-secondary">&times; Tutup Detail</a>
@@ -602,7 +602,7 @@ include __DIR__ . '/../../includes/header.php';
 <?php endif; ?>
 
 <!-- Add / Edit Collapsible Form -->
-<?php if (hasRole(['Administrator', 'admin', 'purchasing', 'finance'])): ?>
+<?php if (hasRole(['Administrator', 'admin', 'pembelian', 'purchasing', 'finance'])): ?>
 <div class="card mb-4" id="form-pemasok-section">
     <details <?= $editSupp ? 'open' : '' ?>>
         <summary style="cursor:pointer; padding:14px 18px; font-weight:600; font-size:14px; color:#111827; background:#f8fafc; border-radius:6px; list-style:none; display:flex; justify-content:space-between; align-items:center;">
@@ -761,7 +761,7 @@ include __DIR__ . '/../../includes/header.php';
                                         👁️ Detail
                                     </a>
 
-                                    <?php if (hasRole(['Administrator', 'admin', 'purchasing', 'finance'])): ?>
+                                    <?php if (hasRole(['Administrator', 'admin', 'pembelian', 'purchasing', 'finance'])): ?>
                                         <!-- Edit Trigger -->
                                         <a href="index.php?page=master_data/suppliers&edit_id=<?= $s['id'] ?>#form-pemasok-section" class="btn btn-sm btn-outline-primary" title="Edit Data Pemasok">
                                             ✏️ Edit
@@ -778,7 +778,7 @@ include __DIR__ . '/../../includes/header.php';
                                         </form>
 
                                         <!-- Delete Trigger (opens modal positioned cleanly outside table) -->
-                                        <?php if (hasRole(['Administrator', 'admin', 'purchasing'])): ?>
+                                        <?php if (hasRole(['Administrator', 'admin', 'pembelian', 'purchasing'])): ?>
                                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="openModal('modal-del-supp-<?= $s['id'] ?>')" title="Hapus Pemasok">
                                                 🗑️
                                             </button>
@@ -804,7 +804,7 @@ include __DIR__ . '/../../includes/header.php';
 <!-- ========================================================================= -->
 <!-- MODALS PLACED CLEANLY OUTSIDE TABLE CONTAINER (Valid HTML5 DOM)           -->
 <!-- ========================================================================= -->
-<?php if (!empty($suppliers) && hasRole(['Administrator', 'admin', 'purchasing'])): ?>
+<?php if (!empty($suppliers) && hasRole(['Administrator', 'admin', 'pembelian', 'purchasing'])): ?>
     <?php foreach ($suppliers as $s): ?>
         <?php $refs = checkRecordReferences('suppliers', $s['id'], $db); ?>
         <div id="modal-del-supp-<?= $s['id'] ?>" class="modal-backdrop">

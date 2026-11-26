@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: index.php?page=production/order_detail&id={$pdoId}");
             exit;
         } elseif ($action === 'approve_spk' && in_array($pdo['status'], ['draft', 'pending_approval'])) {
-            if (!hasRole(['Supervisor / Manajer', 'Administrator', 'manager', 'admin', 'ppic'])) {
+            if (!hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'manajer', 'manager', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])) {
                 throw new Exception("Anda tidak berwenang menyetujui perintah produksi ini.");
             }
             $oldStatus = $pdo['status'];
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: index.php?page=production/order_detail&id={$pdoId}");
             exit;
         } elseif ($action === 'reject_spk' && $pdo['status'] === 'pending_approval') {
-            if (!hasRole(['Supervisor / Manajer', 'Administrator', 'manager', 'admin'])) {
+            if (!hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'manajer', 'manager', 'admin'])) {
                 throw new Exception("Anda tidak berwenang menolak perintah produksi.");
             }
             $rejectReason = trim($_POST['reject_reason'] ?? 'Ditolak manajer');
@@ -443,7 +443,7 @@ include __DIR__ . '/../../includes/header.php';
                         📤 Ajukan Otorisasi SPK
                     </button>
                 </form>
-                <?php if (hasRole(['Supervisor / Manajer', 'Administrator', 'manager', 'admin', 'ppic'])): ?>
+                <?php if (hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'manajer', 'manager', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])): ?>
                     <form action="index.php?page=production/order_detail&id=<?= $pdoId ?>" method="POST" style="display: inline;" onsubmit="return confirm('Setujui dan terbitkan SPK ini secara langsung?');">
                         <?= csrfField() ?>
                         <button type="submit" name="action" value="approve_spk" class="btn btn-primary">
@@ -452,7 +452,7 @@ include __DIR__ . '/../../includes/header.php';
                     </form>
                 <?php endif; ?>
             <?php elseif ($pdo['status'] === 'pending_approval'): ?>
-                <?php if (hasRole(['Supervisor / Manajer', 'Administrator', 'manager', 'admin', 'ppic'])): ?>
+                <?php if (hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'manajer', 'manager', 'admin', 'Petugas Produksi', 'produksi', 'ppic'])): ?>
                     <form action="index.php?page=production/order_detail&id=<?= $pdoId ?>" method="POST" style="display: inline;" onsubmit="return confirm('Apakah Anda menyetujui Perintah Kerja Produksi (SPK) ini?');">
                         <?= csrfField() ?>
                         <button type="submit" name="action" value="approve_spk" class="btn btn-success">

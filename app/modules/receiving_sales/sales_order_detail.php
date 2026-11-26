@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $decision = $_POST['action_credit_override'];
         $reason   = trim($_POST['override_notes'] ?? '');
 
-        if (!hasRole(['Supervisor / Manajer', 'Administrator', 'manager', 'admin'])) {
+        if (!hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'manajer', 'manager', 'admin'])) {
             setFlash('error', 'Hanya Manajer yang berwenang menyetujui override batas kredit.');
             header("Location: index.php?page=receiving_sales/sales_order_detail&id={$soId}");
             exit;
@@ -285,7 +285,7 @@ include __DIR__ . '/../../includes/header.php';
         </div>
         <div class="card-body">
             <p><strong>Alasan Pengajuan oleh <?= e($overrideRecord['requester_name']) ?>:</strong> <?= e($overrideRecord['reason']) ?></p>
-            <?php if (hasRole(['Supervisor / Manajer', 'Administrator', 'manager', 'admin'])): ?>
+            <?php if (hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'manajer', 'manager', 'admin'])): ?>
                 <form action="index.php?page=receiving_sales/sales_order_detail&id=<?= $soId ?>" method="POST" style="margin-top: 14px;">
                     <?= csrfField() ?>
                     <div class="form-group">

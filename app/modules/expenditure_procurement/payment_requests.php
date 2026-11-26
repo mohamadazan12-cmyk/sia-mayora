@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = $_POST['action'] ?? '';
     $reason = trim($_POST['approval_reason'] ?? '');
 
-    $canApprove = hasRole(['Supervisor / Manajer', 'Administrator', 'Finance/Treasury', 'manager', 'admin', 'finance']);
+    $canApprove = hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'Finance/Treasury', 'manajer', 'manager', 'admin', 'finance']);
 
     if (!$canApprove && in_array($action, ['approve', 'reject'])) {
         setFlash('error', 'Anda tidak memiliki hak otorisasi untuk menyetujui permintaan pembayaran.');
@@ -130,7 +130,7 @@ include __DIR__ . '/../../includes/header.php';
                                     Detail
                                 </button>
 
-                                <?php if ($r['status'] === 'pending_approval' && hasRole(['Supervisor / Manajer', 'Administrator', 'Finance/Treasury', 'manager', 'admin', 'finance'])): ?>
+                                <?php if ($r['status'] === 'pending_approval' && hasRole(['Supervisor/Manajer', 'Supervisor / Manajer', 'Administrator', 'Finance/Treasury', 'manajer', 'manager', 'admin', 'finance'])): ?>
                                     <form action="index.php?page=expenditure_procurement/payment_requests" method="POST" style="display: inline-flex; gap: 4px;">
                                         <?= csrfField() ?>
                                         <input type="hidden" name="prq_id" value="<?= $r['id'] ?>">

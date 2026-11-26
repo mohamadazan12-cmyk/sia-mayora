@@ -10,6 +10,14 @@ require_once __DIR__ . '/helpers.php';
 $user = currentUser();
 $roleCode = $user['role_code'] ?? 'admin';
 
+// Normalize role code untuk dashboard URL (DB uses pembelian/produksi/manajer)
+$roleDashboardMap = [
+    'pembelian' => 'purchasing',
+    'produksi'  => 'ppic',
+    'manajer'   => 'manager',
+];
+$roleDashboardCode = $roleDashboardMap[$roleCode] ?? $roleCode;
+
 // Initials for avatar
 $nameParts = preg_split('/\s+/', trim($user['full_name'] ?? 'Pengguna Mayora'));
 $initials = '';
@@ -31,7 +39,7 @@ $defaultSubtitles = [
     'hr'         => 'Sistem Informasi SDM dan Penggajian',
     'manager'    => 'Sistem Informasi Manajemen Operasional',
 ];
-$displaySubTitle = $appSubTitle ?? ($defaultSubtitles[$roleCode] ?? 'Sistem Informasi Akuntansi & Operasional');
+$displaySubTitle = $appSubTitle ?? ($defaultSubtitles[$roleDashboardCode] ?? $defaultSubtitles[$roleCode] ?? 'Sistem Informasi Akuntansi & Operasional');
 
 // Default Breadcrumb Section per Role
 $defaultBreadcrumbs = [
@@ -45,7 +53,7 @@ $defaultBreadcrumbs = [
     'hr'         => 'SDM & Penggajian',
     'manager'    => 'Manajemen',
 ];
-$displayBreadcrumb = $breadcrumbSection ?? ($defaultBreadcrumbs[$roleCode] ?? 'Utama');
+$displayBreadcrumb = $breadcrumbSection ?? ($defaultBreadcrumbs[$roleDashboardCode] ?? $defaultBreadcrumbs[$roleCode] ?? 'Utama');
 $notifCount = (int)($notifCount ?? getSystemNotificationCount($user));
 
 if (!function_exists('renderMayoraNavItem')) {
@@ -148,7 +156,7 @@ if (!function_exists('renderMayoraNavItem')) {
     <ul class="space-y-0.5 text-[11.5px]">
       <!-- Active Item: Dashboard -->
       <li>
-        <a class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-[#FFF2F2] text-[#EE2726] font-semibold transition-colors" href="index.php?page=dashboard/<?= e($roleCode) ?>">
+        <a class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-[#FFF2F2] text-[#EE2726] font-semibold transition-colors" href="index.php?page=dashboard/<?= e($roleDashboardCode) ?>">
           <svg class="w-4 h-4 stroke-[#EE2726] stroke-[2] fill-none" viewBox="0 0 24 24">
             <rect height="7" rx="1.5" width="7" x="3" y="3"></rect>
             <rect height="7" rx="1.5" width="7" x="14" y="3"></rect>
@@ -159,7 +167,7 @@ if (!function_exists('renderMayoraNavItem')) {
         </a>
       </li>
 
-      <?php if ($roleCode === 'purchasing'): ?>
+      <?php if ($roleCode === 'purchasing' || $roleCode === 'pembelian'): ?>
         <!-- Menu Purchasing Sesuai Prototype Final -->
         <?= renderMayoraNavItem('index.php?page=master_data/suppliers', 'Master Vendor') ?>
         <?= renderMayoraNavItem('index.php?page=master_data/items', 'Master Bahan Baku') ?>
@@ -168,7 +176,7 @@ if (!function_exists('renderMayoraNavItem')) {
         <?= renderMayoraNavItem('index.php?page=expenditure_procurement/po', 'Pesanan Pembelian') ?>
         <?= renderMayoraNavItem('index.php?page=expenditure_procurement/gr', 'Retur Pembelian') ?>
 
-      <?php elseif ($roleCode === 'ppic'): ?>
+      <?php elseif ($roleCode === 'ppic' || $roleCode === 'produksi'): ?>
         <p class="text-[9.5px] font-bold tracking-wider text-[#98a2b3] uppercase mt-3 mb-1 px-2.5">PRODUKSI & PPIC</p>
         <?= renderMayoraNavItem('index.php?page=production/orders', 'Perintah Produksi (SPK)') ?>
         <?= renderMayoraNavItem('index.php?page=production/material_issues', 'Pemakaian Bahan Baku') ?>
@@ -243,7 +251,7 @@ if (!function_exists('renderMayoraNavItem')) {
         <?= renderMayoraNavItem('index.php?page=hr_payroll/terminations', 'Berkas Hak Akhir') ?>
         <?= renderMayoraNavItem('index.php?page=hr_payroll/reports', 'Laporan SDM & Gaji') ?>
 
-      <?php elseif ($roleCode === 'manager'): ?>
+      <?php elseif ($roleCode === 'manager' || $roleCode === 'manajer'): ?>
         <p class="text-[9.5px] font-bold tracking-wider text-[#98a2b3] uppercase mt-3 mb-1 px-2.5">OPERASIONAL UTAMA</p>
         <?= renderMayoraNavItem('index.php?page=receiving_sales/sales_orders', 'Pesanan & Sales Order') ?>
         <?= renderMayoraNavItem('index.php?page=production/orders', 'Perintah Produksi (SPK)') ?>
@@ -329,7 +337,7 @@ if (!function_exists('renderMayoraNavItem')) {
 <header class="h-[52px] border-b border-[#ececec] px-6 flex items-center justify-between shrink-0 bg-white" data-purpose="top-navigation">
   <!-- Breadcrumbs navigation -->
   <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-[11.5px] text-[#6b7280]">
-    <a class="text-gray-400 hover:text-gray-600" href="index.php?page=dashboard/<?= e($roleCode) ?>">
+    <a class="text-gray-400 hover:text-gray-600" href="index.php?page=dashboard/<?= e($roleDashboardCode) ?>">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
         <path d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" stroke-linecap="round" stroke-linejoin="round"></path>
       </svg>
@@ -341,7 +349,7 @@ if (!function_exists('renderMayoraNavItem')) {
   <!-- Right Header: Notification & User Info -->
   <div class="flex items-center gap-5">
     <!-- Notification Bell with Count -->
-    <a href="index.php?page=dashboard/<?= e($roleCode) ?>" aria-label="Notifications" class="relative text-gray-400 hover:text-gray-600 p-1">
+    <a href="index.php?page=dashboard/<?= e($roleDashboardCode) ?>" aria-label="Notifications" class="relative text-gray-400 hover:text-gray-600 p-1">
       <svg class="w-5 h-5 text-gray-400 stroke-[1.7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" stroke-linecap="round" stroke-linejoin="round"></path>
       </svg>
