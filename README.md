@@ -10,8 +10,8 @@ Sistem Informasi Akuntansi & Operasional Terintegrasi untuk perusahaan manufaktu
 3. [Panduan Instalasi & Setup Database](#panduan-instalasi--setup-database)
 4. [Kredensial Akun Pengguna Demo](#kredensial-akun-pengguna-demo)
 5. [Arsitektur Database & Konvensi Teknis](#arsitektur-database--konvensi-teknis)
-6. [Katalog 72 Tabel Database (Data Dictionary)](#katalog-72-tabel-database-data-dictionary)
-7. [Alur Siklus Bisnis Utama](#alur-siklus-bisnis-utama)
+6. [Katalog Tabel Database (Data Dictionary)](#katalog-72-tabel-database-data-dictionary)
+7. [Panduan Lengkap Menjalankan Seluruh Siklus Operasional](#panduan-lengkap-menjalankan-seluruh-siklus-operasional)
 8. [Struktur Direktori Proyek](#struktur-direktori-proyek)
 
 ---
@@ -227,29 +227,69 @@ Skema database terbagi secara modular ke dalam 9 kelompok fungsional:
 
 ---
 
-## Alur Siklus Bisnis Utama
+## Panduan Lengkap Menjalankan Seluruh Siklus Operasional
 
-### 1. Siklus Pengadaan (Procure-to-Pay / P2P)
-1. **Kebutuhan Pengadaan:** Staf gudang/departemen membuat *Purchase Requisition* (PR).
-2. **Persetujuan & Pembuatan PO:** Manajer menyetujui PR; bagian Purchasing menerbitkan *Purchase Order* (PO) kepada supplier.
-3. **Penerimaan Fisik:** Supplier mengirimkan barang; staf gudang memeriksa fisik dan mencatat *Goods Receipt* (GR).
-4. **Verifikasi Mutu:** Bagian QC melakukan inspeksi barang masuk pada tabel `qc_inspections`.
-5. **Verifikasi 3 Arah (3-Way Match):** Bagian Finance membandingkan kuantitas dan harga antara PO, GR, dan Invoice Supplier.
-6. **Voucher & Pembayaran:** Finance menerbitkan *AP Voucher*, mengajukan *Payment Request*, dan mengeksekusi *Supplier Payment* dengan posting jurnal otomatis.
+> **Catatan Panduan Detail:** Untuk tutorial komprehensif langkah demi langkah, rute URL, form input, dan tangkapan alur visual per role, silakan baca berkas panduan khusus:  
+> 📖 **[README_PANDUAN_SIKLUS.md](README_PANDUAN_SIKLUS.md)**
 
-### 2. Siklus Manufaktur (Production Cycle)
-1. **Formula Produk (BOM):** Bagian teknik/PPIC menyusun daftar kebutuhan bahan pada tabel `boms` dan `bom_items`.
-2. **Perintah Kerja (SPK):** Diterbitkan *Production Order* berdasarkan target produksi atau pesanan pelanggan.
-3. **Pengeluaran Bahan Baku:** Staf gudang menyerahkan bahan baku melalui *Material Issue* yang secara otomatis mengurangi saldo stok bahan di tabel `stock_balances`.
-4. **Eksekusi & Mutu:** Operator mencatat *Machine Log*, dan QC melakukan inspeksi berkala selama proses manufaktur.
-5. **Barang Jadi & Biaya:** Produk jadi dicatat di `production_outputs` dan masuk ke stok gudang barang jadi. Sistem menghitung biaya produksi total di `production_costs`.
+Sistem Informasi Akuntansi ini mengintegrasikan 4 siklus operasional bisnis hulu ke hilir:
 
-### 3. Siklus Penjualan (Order-to-Cash / O2C)
-1. **Pesanan Penjualan:** Sales menginput *Customer Order* / *Sales Order* (SO).
-2. **Kontrol Plafon Kredit:** Jika pesanan melampaui limit kredit pelanggan atau terdapat faktur jatuh tempo, sistem meminta otorisasi manajer melalui *Credit Override*.
-3. **Pengiriman Barang:** Gudang menerbitkan *Delivery Order* (DO) dan mengurangi stok barang jadi.
-4. **Faktur & Penagihan:** Finance mencetak *Sales Invoice* (Faktur Penjualan) dengan batas tanggal jatuh tempo.
-5. **Penerimaan Piutang:** Kasir mencatat bukti pembayaran pelanggan (*Customer Receipt*) dan mengalokasikannya ke faktur yang bersangkutan.
+### 1. Siklus Pengeluaran & Pengadaan (Procure-to-Pay / P2P)
+*Role Pelaksana: `purchasing`, `manager`, `gudang`, `qc`, `finance` (atau all-in-one via `admin`)*
+1. **Permintaan Pembelian (PR)** (`expenditure_procurement/pr`): Staf gudang/pabrik menginput kebutuhan bahan baku/kemasan $\rightarrow$ Ajukan persetujuan (`pending_approval`).
+2. **Otorisasi PR oleh Manajer** (`dashboard/manager` / detail PR): Manajer meninjau estimasi biaya dan menyetujui PR (`approved`).
+3. **Penerbitan Pesanan Pembelian (PO)** (`expenditure_procurement/po`): Bagian Purchasing memilih vendor (misal: *PT Bogasari Flour Mills*, *PT Salim Ivomas Pratama Tbk*), menetapkan termin pembayaran $\rightarrow$ Terbitkan PO.
+4. **Penerimaan Barang (GR)** (`expenditure_procurement/gr`): Staf gudang mencatat fisik barang yang tiba, nomor surat jalan supplier, lot vendor, dan tanggal kedaluwarsa.
+5. **Inspeksi QC Incoming & Retur**: Bagian QC memverifikasi kualitas. Jika ada bahan cacat, sistem menyediakan modul **Retur Pemasok & Nota Debit** (`expenditure_procurement/returns`) untuk menerbitkan Nota Debit pemotong tagihan dan membalik jurnal Utang Usaha ke Persediaan.
+6. **Three-Way Matching & Faktur Pemasok** (`expenditure_procurement/invoices`): Bagian Keuangan mencocokkan kuantitas dan harga (PO vs GR vs Invoice).
+7. **Pengeluaran Kas / Pembayaran Pemasok** (`expenditure_procurement/payments`): Eksekusi pembayaran via transfer bank $\rightarrow$ Saldo utang berkurang dan kas keluar terjurnal balance.
+
+---
+
+### 2. Siklus Produksi & Pabrikasi (Manufacturing Cycle)
+*Role Pelaksana: `ppic`, `manager`, `gudang`, `qc` (atau all-in-one via `admin`)*
+1. **Jadwal Induk Produksi (MPS)** (`production/mps`): Meninjau target produksi bulanan Mayora (Roma Kelapa, Beng-Beng, Torabika, Kopiko, Energen).
+2. **Kalkulator MRP & Auto-PR** (`production/mrp`): Menghitung defisit bahan baku dari resep (BOM) $\rightarrow$ Klik *Buat PR Pengadaan Otomatis* jika terdapat kekurangan bahan.
+3. **Pembuatan Perintah Produksi (SPK)** (`production/orders`): Buat SPK baru $\rightarrow$ Pilih produk jadi, formula BOM, dan jalur mesin $\rightarrow$ Ajukan persetujuan $\rightarrow$ Disetujui oleh Manajer.
+4. **Pengeluaran Bahan Baku (Material Requisition)** (`production/material_requisitions`): Otorisasi staf gudang untuk menyerahkan bahan mentah ke lantai produksi $\rightarrow$ Saldo stok fisik bahan berkurang otomatis.
+5. **Eksekusi Lantai Pabrik & Tiket Kerja** (`production/order_detail`):
+   - Klik *Mulai Produksi* (`in_progress`).
+   - Catat *Move Tickets* (perpindahan lot dari Stasiun Mixing $\rightarrow$ Baking $\rightarrow$ Packing).
+   - Catat *Job-Time Tickets* (jam kerja operator tenaga kerja langsung).
+   - Catat *Machine Logs* (jam operasi dan pemeliharaan mesin).
+6. **Pencatatan Hasil Produksi (Output & Scrap)**: Masukkan jumlah barang jadi lulus (*Good Qty*) dan afkir (*Scrap Qty*). Sistem secara otomatis menerbitkan **Nomor Batch Baru (`LOT-FG-...`)** dan menghitung tanggal kedaluwarsa 12–24 bulan ke depan.
+7. **Inspeksi QC Akhir** (`production/qc_inspections`): Petugas QC menguji mutu organoleptik $\rightarrow$ Beri status *Pass* $\rightarrow$ SPK selesai (`completed`) $\rightarrow$ Saldo barang jadi bertambah di gudang dan terdaftar di monitoring FEFO.
+
+---
+
+### 3. Siklus Penerimaan & Penjualan (Order-to-Cash / O2C)
+*Role Pelaksana: `penjualan`, `manager`, `gudang`, `finance` (atau all-in-one via `admin`)*
+1. **Pesanan Penjualan (Sales Order)** (`receiving_sales/sales_orders`): Input pesanan distributor Mayora (Indomarco, Sumber Alfaria, Trans Retail) $\rightarrow$ Tentukan termin pembayaran.
+2. **Otorisasi Pesanan & Plafon Kredit**: Sistem mengecek limit kredit pelanggan (*Credit Override Approval* jika pesanan melampaui plafon) $\rightarrow$ Disetujui oleh Manajer.
+3. **Surat Jalan & Pengiriman (Delivery Order)** (`receiving_sales/delivery_orders`): Buat DO $\rightarrow$ Input data armada truk dan pengemudi $\rightarrow$ Konfirmasi pengiriman. Saldo stok barang jadi gudang berkurang seketika.
+4. **Faktur Penjualan (Sales Invoice)** (`receiving_sales/invoices`): Terbitkan faktur komersial (PPN 11%) $\rightarrow$ Mengakui Piutang Usaha (1130) dan Penjualan (4100).
+5. **Penerimaan Kas Pelanggan** (`receiving_sales/receipts`): Catat pelunasan via transfer bank $\rightarrow$ Piutang lunas dan kas bertambah otomatis.
+
+---
+
+### 4. Siklus SDM & Penggajian (HR & Payroll Cycle)
+*Role Pelaksana: `hr`, `manager`, `finance` (atau all-in-one via `admin`)*
+1. **Master Karyawan & Presensi** (`hr_payroll/employees` & `attendance`): Database karyawan pabrik/kantor dan rekapitulasi kehadiran harian.
+2. **Pengajuan Cuti & Lembur** (`hr_payroll/leave_overtime`): Pengajuan lembur shift pabrik $\rightarrow$ Disetujui supervisor/manajer $\rightarrow$ Terhitung otomatis sebagai penambah upah lembur.
+3. **Mutasi & Pelatihan** (`hr_payroll/mutations` & `trainings`): Rekam jejak rotasi stasiun mesin dan pelatihan standar mutu/K3 pangan.
+4. **Hitung Payroll Otomatis** (`hr_payroll/payroll_process`):
+   - Sistem mengkalkulasi secara otomatis:
+     $$\text{Take-Home Pay} = (\text{Gaji Pokok} + \text{Tunjangan} + \text{Uang Makan} + \text{Lembur}) - (\text{BPJS} + \text{PPh 21})$$
+5. **Verifikasi Slip Gaji & Approval** (`hr_payroll/salary_verification` & `dashboard/manager`): Staf HR memvalidasi rincian gaji $\rightarrow$ Manajer memberikan otorisasi akhir.
+6. **Pencairan & Jurnal Akuntansi**: Finance menandai *Paid*, cetak slip gaji siap distribusi, dan sistem membukukan jurnal beban gaji vs kas/bank.
+
+---
+
+### 5. Modul Lintas Siklus: FEFO, Traceability & Akuntansi
+1. **Monitoring Batch & FEFO** (`inventory/batches`): Memantau tanggal kedaluwarsa seluruh lot bahan dan produk jadi dengan indikator warna visual (*Aman*, *Mendekati ED*, *Kritis*, *Expired*).
+2. **Product Traceability** (`inventory/traceability`): Melacak pohon silsilah alur pangan secara utuh dari vendor asal bahan baku $\rightarrow$ lot kedatangan $\rightarrow$ SPK mesin $\rightarrow$ QC $\rightarrow$ batch barang jadi $\rightarrow$ surat jalan pelanggan.
+3. **Buku Jurnal Umum (GL)** (`reports/journals`): Memverifikasi bahwa setiap transaksi dari 4 siklus di atas menghasilkan entri jurnal berpasangan seimbang (Debit = Kredit).
+4. **Pusat Notifikasi Interaktif** (`reports/notifications`): Lonceng interaktif di navbar atas untuk notifikasi real-time dokumen yang menunggu approval atau inspeksi.
 
 ---
 
