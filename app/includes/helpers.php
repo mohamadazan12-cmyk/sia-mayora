@@ -539,6 +539,19 @@ function getSystemNotificationCount($user = null) {
         return 0;
     }
 
+    // Prioritize persistent unread notifications from notifications table
+    try {
+        if (!class_exists('NotificationService')) {
+            require_once __DIR__ . '/../services/notification_service.php';
+        }
+        $notifUnread = NotificationService::getUnreadCount($user);
+        if ($notifUnread > 0) {
+            return $notifUnread;
+        }
+    } catch (Exception $e) {
+        // Fallback to transaction pending counts
+    }
+
     $db = getDbConnection();
     $roleSource = !empty($user['role_code']) ? $user['role_code'] : ($user['role_name'] ?? '');
     $role = strtolower(trim((string)$roleSource));

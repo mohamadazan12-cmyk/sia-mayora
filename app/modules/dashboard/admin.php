@@ -14,7 +14,7 @@ $user = currentUser();
 $salesCount = (int)$db->query("SELECT COUNT(*) FROM sales_orders WHERE status NOT IN ('cancelled')")->fetchColumn();
 $unpaidInvoicesCount = (int)$db->query("SELECT COUNT(*) FROM sales_invoices WHERE status IN ('issued', 'partially_paid', 'overdue')")->fetchColumn();
 $unpaidInvoicesTotal = (float)$db->query("SELECT COALESCE(SUM(balance), 0) FROM sales_invoices WHERE status IN ('issued', 'partially_paid', 'overdue')")->fetchColumn();
-$receiptsTotal = (float)$db->query("SELECT COALESCE(SUM(total_amount), 0) FROM customer_receipts WHERE status = 'verified'")->fetchColumn();
+$receiptsTotal = (float)$db->query("SELECT COALESCE(SUM(total_amount), 0) FROM customer_receipts WHERE status IN ('verified', 'posted')")->fetchColumn();
 
 // 2. Produksi
 $prodPlanningCount = (int)$db->query("SELECT COUNT(*) FROM production_orders WHERE status IN ('draft', 'pending_approval', 'approved', 'waiting_material')")->fetchColumn();
@@ -95,6 +95,29 @@ $pendingApprovalsCount = (int)$db->query("
     ) AS total_pending
 ")->fetchColumn();
 
+// 8. Tren Bulanan Penjualan vs Pengadaan (6 Bulan Terakhir)
+$monthlyTrend = $db->query("
+    SELECT 
+        DATE_FORMAT(so.so_date, '%b %Y') AS month_label,
+        DATE_FORMAT(so.so_date, '%Y-%m') AS ym,
+        COALESCE(SUM(so.total_amount), 0) AS sales_total,
+        (
+            SELECT COALESCE(SUM(po.total_amount), 0)
+            FROM purchase_orders po 
+            WHERE DATE_FORMAT(po.po_date, '%Y-%m') = DATE_FORMAT(so.so_date, '%Y-%m')
+              AND po.status NOT IN ('cancelled')
+        ) AS purchase_total
+    FROM sales_orders so
+    WHERE so.status NOT IN ('cancelled')
+    GROUP BY DATE_FORMAT(so.so_date, '%Y-%m'), DATE_FORMAT(so.so_date, '%b %Y')
+    ORDER BY ym ASC
+    LIMIT 6
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$trendLabels = json_encode(array_column($monthlyTrend, 'month_label'));
+$salesSeries = json_encode(array_map(function($v) { return round($v / 1000000, 1); }, array_column($monthlyTrend, 'sales_total')));
+$purchaseSeries = json_encode(array_map(function($v) { return round($v / 1000000, 1); }, array_column($monthlyTrend, 'purchase_total')));
+
 $pageTitle = 'Dashboard Utama Perusahaan';
 $breadcrumbSection = 'Perusahaan';
 $appSubTitle = 'Sistem Informasi Akuntansi & Operasional';
@@ -160,6 +183,87 @@ include __DIR__ . '/../../includes/dashboard_header.php';
     <span class="text-[11px] text-[#687588] mt-2">Inspeksi akhir lab mutu</span>
   </div>
 </div>
+
+<!-- Chart: Tren 6 Bulan Penjualan vs Pengadaan -->
+<section class="max-w-5xl mb-12 bg-white rounded-xl border border-gray-150 p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-[14px] font-bold text-[#111827]">Tren Kinerja Keuangan &amp; Operasional (6 Bulan Terakhir)</h3>
+      <p class="text-[11.5px] text-[#687588]">Perbandingan total omset penjualan vs belanja pengadaan bahan baku (dalam Juta Rupiah)</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#EE2726] inline-block"></span> Penjualan
+      </span>
+      <span class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#3b82f6] inline-block"></span> Pengadaan
+      </span>
+    </div>
+  </div>
+  <div class="h-64 w-full">
+    <canvas id="adminTrendChart"></canvas>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('adminTrendChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: <?= $trendLabels ?>,
+        datasets: [
+          {
+            label: 'Penjualan',
+            data: <?= $salesSeries ?>,
+            borderColor: '#EE2726',
+            backgroundColor: 'rgba(238, 39, 38, 0.08)',
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            pointBackgroundColor: '#EE2726'
+          },
+          {
+            label: 'Pengadaan',
+            data: <?= $purchaseSeries ?>,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.05)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            fill: false,
+            tension: 0.35,
+            pointRadius: 4,
+            pointBackgroundColor: '#3b82f6'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(c) { return c.dataset.label + ': Rp ' + c.parsed.y.toLocaleString('id-ID') + ' Juta'; }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              callback: function(v) { return 'Rp ' + v.toLocaleString('id-ID') + ' Jt'; }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
 
 <!-- BEGIN: Tabel Transaksi Terbaru Lintas Bagian -->
 <section class="max-w-5xl mb-14" data-purpose="recent-transactions-section">

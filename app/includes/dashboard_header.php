@@ -6,9 +6,11 @@
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/../services/notification_service.php';
 
 $user = currentUser();
 $roleCode = $user['role_code'] ?? 'admin';
+$recentNotifications = NotificationService::getRecent($user, 5);
 
 // Normalize role code untuk dashboard URL (DB uses pembelian/produksi/manajer)
 $roleDashboardMap = [
@@ -77,6 +79,8 @@ if (!function_exists('renderMayoraNavItem')) {
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Chart.js for Executive & Operational Visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script data-purpose="tailwind-config">
     tailwind.config = {
       theme: {
@@ -348,17 +352,110 @@ if (!function_exists('renderMayoraNavItem')) {
 
   <!-- Right Header: Notification & User Info -->
   <div class="flex items-center gap-5">
-    <!-- Notification Bell with Count -->
-    <a href="index.php?page=dashboard/<?= e($roleDashboardCode) ?>" aria-label="Notifications" class="relative text-gray-400 hover:text-gray-600 p-1">
-      <svg class="w-5 h-5 text-gray-400 stroke-[1.7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" stroke-linecap="round" stroke-linejoin="round"></path>
-      </svg>
-      <?php if ($notifCount > 0): ?>
-      <span class="absolute top-0 right-0 w-3.5 h-3.5 bg-[#EE2726] text-white rounded-full text-[9px] font-bold flex items-center justify-center translate-x-1 -translate-y-0.5">
-        <?= $notifCount > 9 ? '9+' : $notifCount ?>
-      </span>
-      <?php endif; ?>
-    </a>
+    <!-- Notification Bell with Dropdown -->
+    <div class="relative" id="mayoraNotifDropdownWrapper">
+      <button type="button" id="mayoraNotifBtn" aria-label="Notifications" class="relative text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none">
+        <svg class="w-5 h-5 text-gray-500 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        <?php if ($notifCount > 0): ?>
+        <span class="absolute top-0 right-0 w-4 h-4 bg-[#EE2726] text-white rounded-full text-[9px] font-bold flex items-center justify-center translate-x-1 -translate-y-0.5 shadow-sm">
+          <?= $notifCount > 9 ? '9+' : $notifCount ?>
+        </span>
+        <?php endif; ?>
+      </button>
+
+      <!-- Dropdown Panel -->
+      <div id="mayoraNotifMenu" class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform origin-top-right transition-all">
+        <!-- Header -->
+        <div class="px-4 py-3 bg-gradient-to-r from-red-50 to-white border-b border-gray-100 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-[13px] text-gray-900">Pemberitahuan</span>
+            <?php if ($notifCount > 0): ?>
+            <span class="bg-[#EE2726] text-white text-[10px] font-bold px-2 py-0.5 rounded-full"><?= $notifCount ?> Baru</span>
+            <?php endif; ?>
+          </div>
+          <?php if ($notifCount > 0): ?>
+          <form method="POST" action="index.php?page=reports/notifications" class="m-0">
+            <?= csrfField() ?>
+            <input type="hidden" name="action" value="mark_all_read">
+            <button type="submit" class="text-[11px] text-[#EE2726] hover:underline font-semibold bg-transparent border-none p-0 cursor-pointer">
+              Tandai Semua Dibaca
+            </button>
+          </form>
+          <?php endif; ?>
+        </div>
+
+        <!-- Body: Recent notifications -->
+        <div class="max-h-72 overflow-y-auto divide-y divide-gray-50">
+          <?php if (empty($recentNotifications)): ?>
+            <div class="p-6 text-center text-gray-400">
+              <svg class="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <p class="text-[12px] font-medium text-gray-500">Tidak ada pemberitahuan baru</p>
+              <p class="text-[10px] text-gray-400">Seluruh tugas operasional Anda dalam kondisi termutakhir.</p>
+            </div>
+          <?php else: ?>
+            <?php foreach ($recentNotifications as $rn): 
+              $isUnread = (int)$rn['is_read'] === 0;
+              $typeBadge = [
+                'danger'  => 'bg-red-50 text-red-600 border-red-100',
+                'warning' => 'bg-amber-50 text-amber-600 border-amber-100',
+                'success' => 'bg-emerald-50 text-emerald-600 border-emerald-100',
+                'info'    => 'bg-blue-50 text-blue-600 border-blue-100',
+              ];
+              $badgeClass = $typeBadge[$rn['type']] ?? $typeBadge['info'];
+            ?>
+            <a href="<?= !empty($rn['link']) ? e($rn['link']) : 'index.php?page=reports/notifications' ?>" class="block px-4 py-3 hover:bg-gray-50 transition-colors <?= $isUnread ? 'bg-red-50/30' : '' ?>">
+              <div class="flex items-start gap-2.5">
+                <div class="w-2 h-2 rounded-full mt-1.5 shrink-0 <?= $isUnread ? 'bg-[#EE2726]' : 'bg-gray-300' ?>"></div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-1 mb-0.5">
+                    <span class="text-[11.5px] font-bold text-gray-900 truncate"><?= e($rn['title']) ?></span>
+                    <span class="text-[9.5px] text-gray-400 shrink-0"><?= date('H:i', strtotime($rn['created_at'])) ?></span>
+                  </div>
+                  <p class="text-[11px] text-gray-600 line-clamp-2 leading-snug"><?= e($rn['message']) ?></p>
+                  <div class="mt-1 flex items-center gap-1.5">
+                    <span class="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded border <?= $badgeClass ?>"><?= e($rn['category']) ?></span>
+                    <?php if (!empty($rn['link'])): ?>
+                    <span class="text-[9.5px] font-semibold text-[#EE2726]">Buka &rarr;</span>
+                    <?php endif; ?>
+                  </div>
+                </div>
+              </div>
+            </a>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-4 py-2.5 bg-gray-50 border-t border-gray-100 text-center">
+          <a href="index.php?page=reports/notifications" class="text-[11.5px] font-bold text-[#EE2726] hover:text-red-700 transition-colors">
+            Lihat Semua Riwayat Notifikasi &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Script to toggle dropdown -->
+    <script>
+      (function(){
+        const btn = document.getElementById('mayoraNotifBtn');
+        const menu = document.getElementById('mayoraNotifMenu');
+        if (btn && menu) {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            menu.classList.toggle('hidden');
+          });
+          document.addEventListener('click', function(e) {
+            if (!menu.contains(e.target) && e.target !== btn) {
+              menu.classList.add('hidden');
+            }
+          });
+        }
+      })();
+    </script>
 
     <!-- User Profile -->
     <div class="flex items-center gap-2.5" data-purpose="user-badge">

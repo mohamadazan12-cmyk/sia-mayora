@@ -108,6 +108,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':uid'     => $user['id'],
             ]);
             setFlash('success', "Aktivitas mesin {$machineName} berhasil dicatat.");
+        } elseif ($action === 'add_move_ticket') {
+            $fromStation = trim($_POST['from_station'] ?? '');
+            $toStation   = trim($_POST['to_station'] ?? '');
+            $qtyMoved    = parseDecimal($_POST['qty_moved'] ?? 0);
+            $notes       = trim($_POST['notes'] ?? '');
+
+            if (empty($fromStation) || empty($toStation) || $qtyMoved <= 0) {
+                throw new Exception('Stasiun asal, stasiun tujuan, dan kuantitas pemindahan (>0) wajib diisi.');
+            }
+
+            $mtNum = generateDocNumber('MT', 'move_tickets', 'ticket_number');
+            $stmtMt = $db->prepare("
+                INSERT INTO move_tickets (ticket_number, production_order_id, from_station, to_station, move_date, qty_moved, status, transferred_by, notes, created_at)
+                VALUES (?, ?, ?, ?, NOW(), ?, 'received', ?, ?, NOW())
+            ");
+            $stmtMt->execute([$mtNum, $pdoId, $fromStation, $toStation, $qtyMoved, $user['id'], $notes]);
+            setFlash('success', "Tiket Pemindahan (Move Ticket) {$mtNum} berhasil dicatat ({$qtyMoved} unit dari {$fromStation} ke {$toStation}).");
+        } elseif ($action === 'add_job_time_ticket') {
+            $empId       = (int)($_POST['employee_id'] ?? 0);
+            $opId        = !empty($_POST['operation_id']) ? (int)$_POST['operation_id'] : null;
+            $workDate    = trim($_POST['work_date'] ?? date('Y-m-d'));
+            $startTime   = trim($_POST['start_time'] ?? '08:00');
+            $endTime     = trim($_POST['end_time'] ?? '16:00');
+            $hoursWorked = parseDecimal($_POST['hours_worked'] ?? 8.0);
+            $hourlyRate  = parseDecimal($_POST['hourly_rate'] ?? 25000);
+            $laborCost   = $hoursWorked * $hourlyRate;
+            $notes       = trim($_POST['notes'] ?? '');
+
+            if ($empId <= 0 || $hoursWorked <= 0) {
+                throw new Exception('Nama karyawan dan durasi jam kerja (>0) wajib diisi.');
+            }
+
+            $jttNum = generateDocNumber('JTT', 'job_time_tickets', 'ticket_number');
+            $stmtJtt = $db->prepare("
+                INSERT INTO job_time_tickets 
+                (ticket_number, production_order_id, employee_id, operation_id, work_date, start_time, end_time, hours_worked, hourly_rate, labor_cost, status, verified_by, notes, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, NOW())
+            ");
+            $stmtJtt->execute([$jttNum, $pdoId, $empId, $opId, $workDate, $startTime, $endTime, $hoursWorked, $hourlyRate, $laborCost, $user['id'], $notes]);
+            setFlash('success', "Tiket Jam Kerja (Job-Time Ticket) {$jttNum} berhasil dicatat (Rp " . number_format($laborCost, 0, ',', '.') . ").");
         } elseif ($action === 'record_qc') {
             $params   = trim($_POST['parameters'] ?? '');
             $result   = trim($_POST['result'] ?? 'pass');
@@ -194,6 +234,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $user['id'],
                         $db
                     );
+
+                    // Auto Register Lot Batch for Finished Goods (FEFO Compliance & Product Traceability)
+                    $fgBatchNumber = sprintf('LOT-FG-%s-%s-%03d', preg_replace('/[^A-Za-z0-9]/', '', $pdo['product_code']), date('ymd'), rand(100, 999));
+                    $mfgDate = date('Y-m-d');
+                    $expDate = date('Y-m-d', strtotime('+12 months')); // 1 year expiry
+
+                    $stmtPb = $db->prepare("
+                        INSERT INTO product_batches 
+                        (batch_number, item_id, production_order_id, qc_inspection_id, warehouse_id, initial_qty, current_qty, mfg_date, expiry_date, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'passed', NOW())
+                    ");
+                    $stmtPb->execute([
+                        $fgBatchNumber,
+                        $pdo['product_item_id'],
+                        $pdoId,
+                        $qcId,
+                        $pdo['warehouse_output_id'],
+                        $qtyGood,
+                        $qtyGood,
+                        $mfgDate,
+                        $expDate
+                    ]);
                 }
 
                 // Update PO actuals and mark completed
@@ -366,6 +428,50 @@ $qcList = $qcInspections->fetchAll();
 $outputs = $db->prepare("SELECT * FROM production_outputs WHERE production_order_id = :id ORDER BY id DESC");
 $outputs->execute([':id' => $pdoId]);
 $outputList = $outputs->fetchAll();
+
+// Fetch Move Tickets
+$moveTickets = $db->prepare("
+    SELECT mt.*, u1.full_name as transferred_by_name, u2.full_name as received_by_name 
+    FROM move_tickets mt 
+    LEFT JOIN users u1 ON mt.transferred_by = u1.id 
+    LEFT JOIN users u2 ON mt.received_by = u2.id 
+    WHERE mt.production_order_id = :id 
+    ORDER BY mt.id ASC
+");
+$moveTickets->execute([':id' => $pdoId]);
+$moveTicketList = $moveTickets->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch Job-Time Tickets
+$jobTimeTickets = $db->prepare("
+    SELECT jtt.*, e.full_name as employee_name, e.code as employee_code, ol.operation_name, u.full_name as verifier_name 
+    FROM job_time_tickets jtt 
+    JOIN employees e ON jtt.employee_id = e.id 
+    LEFT JOIN operations_lists ol ON jtt.operation_id = ol.id 
+    LEFT JOIN users u ON jtt.verified_by = u.id 
+    WHERE jtt.production_order_id = :id 
+    ORDER BY jtt.id ASC
+");
+$jobTimeTickets->execute([':id' => $pdoId]);
+$jobTimeTicketList = $jobTimeTickets->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch Batches created for this SPK
+$spkBatches = $db->prepare("
+    SELECT pb.*, w.name as warehouse_name 
+    FROM product_batches pb 
+    LEFT JOIN warehouses w ON pb.warehouse_id = w.id 
+    WHERE pb.production_order_id = :id 
+    ORDER BY pb.id DESC
+");
+$spkBatches->execute([':id' => $pdoId]);
+$spkBatchList = $spkBatches->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch active employees for dropdown
+$activeEmployees = $db->query("SELECT id, code, full_name FROM employees WHERE status = 'active' ORDER BY full_name ASC LIMIT 50")->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch operations routing for this product/bom
+$routingOps = $db->prepare("SELECT id, operation_name, work_center, sequence_number FROM operations_lists WHERE bom_id = :bid ORDER BY sequence_number ASC");
+$routingOps->execute([':bid' => $pdo['bom_id'] ?? 0]);
+$routingOpList = $routingOps->fetchAll(PDO::FETCH_ASSOC);
 
 include __DIR__ . '/../../includes/header.php';
 ?>
@@ -658,11 +764,211 @@ include __DIR__ . '/../../includes/header.php';
     <?php endif; ?>
 </div>
 
-<!-- Panel 4: Penyelesaian Hasil Produksi (Output & Scrap) -->
+<!-- Panel 4: Perpindahan Antar Stasiun (Move Tickets) -->
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="card-title">4. Tiket Pemindahan Antar Stasiun (Move Tickets)</span>
+        <span style="font-size: 12px; color: var(--text-muted);"><?= count($moveTicketList) ?> perpindahan tercatat</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>No. Tiket</th>
+                    <th>Stasiun Asal</th>
+                    <th>Stasiun Tujuan</th>
+                    <th>Waktu Pindah</th>
+                    <th class="text-right">Kuantitas</th>
+                    <th>Dipindahkan Oleh</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($moveTicketList)): ?>
+                    <tr><td colspan="7" class="text-center" style="padding: 14px; color: var(--text-muted);">Belum ada tiket pemindahan antar proses/stasiun.</td></tr>
+                <?php else: ?>
+                    <?php foreach ($moveTicketList as $mt): ?>
+                        <tr>
+                            <td><strong><?= e($mt['ticket_number']) ?></strong></td>
+                            <td><?= e($mt['from_station']) ?></td>
+                            <td>&rarr; <strong><?= e($mt['to_station']) ?></strong></td>
+                            <td><?= formatDateTime($mt['move_date']) ?></td>
+                            <td class="text-right" style="font-weight: 700;"><?= formatNumber($mt['qty_moved']) ?></td>
+                            <td><?= e($mt['transferred_by_name'] ?: 'Operator') ?></td>
+                            <td><span class="badge badge-success">✓ Diterima</span></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php if ($pdo['status'] === 'in_progress'): ?>
+        <div class="card-footer">
+            <details>
+                <summary style="cursor: pointer; font-weight: 600; color: var(--primary);">+ Buat Tiket Pemindahan (Move Ticket)</summary>
+                <form action="index.php?page=production/order_detail&id=<?= $pdoId ?>" method="POST" style="margin-top: 14px;">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="action" value="add_move_ticket">
+                    <div class="form-row">
+                        <div class="col-md-3">
+                            <label class="form-label required">Stasiun Asal</label>
+                            <input type="text" name="from_station" class="form-control" placeholder="Cth: Stasiun Mixing & Pengadonan" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label required">Stasiun Tujuan</label>
+                            <input type="text" name="to_station" class="form-control" placeholder="Cth: Stasiun Baking & Pemanggangan" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label required">Kuantitas Dipindahkan</label>
+                            <input type="number" step="0.01" name="qty_moved" class="form-control" value="<?= (float)$pdo['target_qty'] ?>" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Catat Pemindahan</button>
+                        </div>
+                    </div>
+                </form>
+            </details>
+        </div>
+    <?php endif; ?>
+</div>
+
+<!-- Panel 5: Jam Kerja Tenaga Kerja Langsung (Job-Time Tickets) -->
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="card-title">5. Kartu Jam Kerja Operator (Job-Time Tickets / BTKL)</span>
+        <span style="font-size: 12px; color: var(--text-muted);"><?= count($jobTimeTicketList) ?> kartu waktu tercatat</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>No. Kartu</th>
+                    <th>Karyawan (Operator)</th>
+                    <th>Stasiun / Operasi</th>
+                    <th>Tanggal & Jam</th>
+                    <th class="text-right">Jam Kerja</th>
+                    <th class="text-right">Biaya Tenaga Kerja (BTKL)</th>
+                    <th>Verifikasi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($jobTimeTicketList)): ?>
+                    <tr><td colspan="7" class="text-center" style="padding: 14px; color: var(--text-muted);">Belum ada tiket jam kerja operator.</td></tr>
+                <?php else: ?>
+                    <?php 
+                    $totalLaborCost = 0;
+                    foreach ($jobTimeTicketList as $jtt): 
+                        $totalLaborCost += (float)$jtt['labor_cost'];
+                    ?>
+                        <tr>
+                            <td><strong><?= e($jtt['ticket_number']) ?></strong></td>
+                            <td><?= e($jtt['employee_name']) ?> <code style="font-size: 11px;"><?= e($jtt['employee_code']) ?></code></td>
+                            <td><?= e($jtt['operation_name'] ?: 'Operasional Produksi') ?></td>
+                            <td><?= formatDate($jtt['work_date']) ?> (<?= substr($jtt['start_time'], 0, 5) ?> - <?= substr($jtt['end_time'], 0, 5) ?>)</td>
+                            <td class="text-right font-weight-bold"><?= formatNumber($jtt['hours_worked'], 1) ?> Jam</td>
+                            <td class="text-right" style="font-weight: 700; color: var(--primary);">Rp <?= number_format((float)$jtt['labor_cost'], 0, ',', '.') ?></td>
+                            <td><span class="badge badge-success">✓ Disetujui</span></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php if ($pdo['status'] === 'in_progress'): ?>
+        <div class="card-footer">
+            <details>
+                <summary style="cursor: pointer; font-weight: 600; color: var(--primary);">+ Input Jam Kerja Operator (Job-Time Ticket)</summary>
+                <form action="index.php?page=production/order_detail&id=<?= $pdoId ?>" method="POST" style="margin-top: 14px;">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="action" value="add_job_time_ticket">
+                    <div class="form-row">
+                        <div class="col-md-3">
+                            <label class="form-label required">Operator Produksi</label>
+                            <select name="employee_id" class="form-control" required>
+                                <option value="">-- Pilih Operator --</option>
+                                <?php foreach ($activeEmployees as $emp): ?>
+                                    <option value="<?= (int)$emp['id'] ?>"><?= e($emp['full_name']) ?> (<?= e($emp['code']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Stasiun / Routing Operasi</label>
+                            <select name="operation_id" class="form-control">
+                                <option value="">-- Umum / Sesuai BOM --</option>
+                                <?php foreach ($routingOpList as $rop): ?>
+                                    <option value="<?= (int)$rop['id'] ?>"><?= e($rop['sequence_number']) ?>. <?= e($rop['operation_name']) ?> (<?= e($rop['work_center']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label required">Durasi (Jam)</label>
+                            <input type="number" step="0.5" name="hours_worked" class="form-control" value="8.0" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label required">Tarif per Jam (Rp)</label>
+                            <input type="number" step="1000" name="hourly_rate" class="form-control" value="25000" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Simpan Kartu</button>
+                        </div>
+                    </div>
+                </form>
+            </details>
+        </div>
+    <?php endif; ?>
+</div>
+
+<!-- Panel 6: Pelacakan Lot Batch Barang Jadi & FEFO (Bila Sudah Selesai) -->
+<?php if (!empty($spkBatchList)): ?>
+<div class="card" style="border-left: 4px solid #15803d;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="card-title">6. Nomor Lot Batch Terbit & Kedaluwarsa (FEFO Traceability)</span>
+        <a href="index.php?page=inventory/batches" class="btn btn-sm btn-outline-secondary" style="font-size: 11px;">Buka Batch Control &rarr;</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nomor Lot Batch</th>
+                    <th>Tgl Manufaktur</th>
+                    <th>Tgl Kedaluwarsa</th>
+                    <th class="text-right">Stok Batch</th>
+                    <th>Lokasi Gudang</th>
+                    <th class="text-center">Status Mutu</th>
+                    <th class="text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($spkBatchList as $sb): ?>
+                    <tr>
+                        <td>
+                            <strong style="font-family: monospace; font-size: 13px; color: #0f172a;"><?= e($sb['batch_number']) ?></strong>
+                        </td>
+                        <td><?= formatDate($sb['mfg_date']) ?></td>
+                        <td><strong><?= formatDate($sb['expiry_date']) ?></strong></td>
+                        <td class="text-right font-weight-bold" style="color: #15803d;"><?= formatNumber($sb['current_qty']) ?> <?= e($pdo['unit_name']) ?></td>
+                        <td><?= e($sb['warehouse_name'] ?: $pdo['wh_output_name']) ?></td>
+                        <td class="text-center"><span class="badge badge-success">✓ Lulus QC</span></td>
+                        <td class="text-center">
+                            <a href="index.php?page=inventory/traceability&batch=<?= urlencode($sb['batch_number']) ?>" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 8px;">
+                                🔍 Telusuri Silsilah
+                            </a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Panel 7: Penyelesaian Hasil Produksi (Output & Scrap) -->
 <?php if (in_array($pdo['status'], ['waiting_qc', 'in_progress'])): ?>
     <div class="card" style="border-left: 4px solid var(--success);">
         <div class="card-header">
-            <span class="card-title">4. Penyelesaian Batch Produksi: Simpan Barang Jadi & Scrap</span>
+            <span class="card-title">7. Penyelesaian Batch Produksi: Simpan Barang Jadi & Scrap</span>
         </div>
         <div class="card-body">
             <form action="index.php?page=production/order_detail&id=<?= $pdoId ?>" method="POST">

@@ -259,6 +259,11 @@ function enforcePageAccess($page) {
         denyAccess($page, 'Modul Administrasi Pengguna hanya dapat diakses oleh Administrator Sistem.');
     }
 
+    // Notifications page accessible by all authenticated roles
+    if ($module === 'reports' && $subpage === 'notifications') {
+        return true;
+    }
+
     // 3. Manager has access to all operational modules
     if ($roleCode === 'manager' || $roleCode === 'manajer') {
         return true;
@@ -270,46 +275,51 @@ function enforcePageAccess($page) {
         case 'pembelian':
             if ($module === 'expenditure_procurement') return true;
             if ($module === 'master_data' && in_array($subpage, ['suppliers', 'items', 'units', ''])) return true;
-            if ($module === 'inventory' && in_array($subpage, ['stock', ''])) return true;
-            denyAccess($page, 'Staff Pembelian (Purchasing) hanya berwenang mengakses modul Pengadaan, Pemasok, dan Bahan Baku.');
+            if ($module === 'inventory' && in_array($subpage, ['stock', 'batches', 'traceability', ''])) return true;
+            if ($module === 'production' && in_array($subpage, ['mrp', ''])) return true;
+            denyAccess($page, 'Staff Pembelian (Purchasing) hanya berwenang mengakses modul Pengadaan, Pemasok, Bahan Baku, dan MRP.');
             break;
 
         case 'ppic':
         case 'produksi':
             if ($module === 'production') return true;
             if ($module === 'master_data' && in_array($subpage, ['boms', 'items', 'units', ''])) return true;
-            if ($module === 'inventory' && in_array($subpage, ['stock', ''])) return true;
-            denyAccess($page, 'Petugas Produksi & PPIC hanya berwenang mengakses modul Produksi, Formula BOM, dan Saldo Stok.');
+            if ($module === 'inventory' && in_array($subpage, ['stock', 'batches', 'traceability', ''])) return true;
+            denyAccess($page, 'Petugas Produksi & PPIC hanya berwenang mengakses modul Produksi, Formula BOM, Saldo Stok, dan Batch Traceability.');
             break;
 
         case 'penjualan':
             if ($module === 'receiving_sales') return true;
+            if ($module === 'inventory' && in_array($subpage, ['batches', 'traceability', 'stock', ''])) return true;
             if ($module === 'master_data' && in_array($subpage, ['customers', 'items', 'units', ''])) return true;
             denyAccess($page, 'Petugas Penjualan hanya berwenang mengakses modul Penerimaan, Penjualan, dan Pelanggan.');
             break;
 
         case 'gudang':
             if ($module === 'inventory') return true;
-            if ($module === 'expenditure_procurement' && strpos($subpage, 'gr') === 0) return true;
+            if ($module === 'expenditure_procurement' && (strpos($subpage, 'gr') === 0 || $subpage === 'returns')) return true;
             if ($module === 'receiving_sales' && strpos($subpage, 'delivery_order') === 0) return true;
+            if ($module === 'production' && in_array($subpage, ['material_requisitions', 'material_issues', 'order_detail', 'orders', ''])) return true;
             if ($module === 'master_data' && in_array($subpage, ['warehouses', 'items', 'units', ''])) return true;
-            denyAccess($page, 'Petugas Gudang hanya berwenang mengakses modul Persediaan, Gudang, Penerimaan GR, dan Pengiriman DO.');
+            denyAccess($page, 'Petugas Gudang hanya berwenang mengakses modul Persediaan, Gudang, Penerimaan GR, Material Requisition, dan Pengiriman DO.');
             break;
 
         case 'qc':
-            if ($module === 'production' && in_array($subpage, ['qc_inspections', 'outputs', ''])) return true;
-            if ($module === 'expenditure_procurement' && strpos($subpage, 'gr') === 0) return true;
-            if ($module === 'master_data' && in_array($subpage, ['boms', 'items', 'units', ''])) return true;
-            denyAccess($page, 'Petugas Quality Control (QC) hanya berwenang mengakses modul Pemeriksaan Mutu dan Hasil Produksi.');
+            if ($module === 'production' && in_array($subpage, ['qc_inspections', 'outputs', 'orders', 'order_detail', ''])) return true;
+            if ($module === 'expenditure_procurement' && (strpos($subpage, 'gr') === 0 || $subpage === 'returns')) return true;
+            if ($module === 'inventory' && in_array($subpage, ['batches', 'traceability', 'stock', ''])) return true;
+            if ($module === 'master_data' && in_array($subpage, ['boms', 'items', 'units', 'quality_standards', ''])) return true;
+            denyAccess($page, 'Petugas Quality Control (QC) hanya berwenang mengakses modul Pemeriksaan Mutu, Hasil Produksi, dan Batch Traceability.');
             break;
 
         case 'finance':
             if ($module === 'receiving_sales' && in_array($subpage, ['receivables', 'receipts', 'receipt_detail', 'receipt_create', 'invoices', 'invoice_detail', ''])) return true;
-            if ($module === 'expenditure_procurement' && in_array($subpage, ['invoices', 'invoice_detail', 'payment_requests', 'payments', 'payment_create', ''])) return true;
+            if ($module === 'expenditure_procurement' && in_array($subpage, ['invoices', 'invoice_detail', 'returns', 'payment_requests', 'payments', 'payment_create', ''])) return true;
+            if ($module === 'production' && in_array($subpage, ['hpp_summary', 'orders', 'order_detail', ''])) return true;
             if ($module === 'reports' && in_array($subpage, ['journals', 'index', ''])) return true;
             if ($module === 'hr_payroll' && in_array($subpage, ['approvals', 'salary_verification', 'terminations', 'reports', ''])) return true;
             if ($module === 'master_data' && in_array($subpage, ['accounts', 'customers', 'suppliers', 'departments', ''])) return true;
-            denyAccess($page, 'Petugas Keuangan & Akuntansi hanya berwenang mengakses modul Keuangan, Piutang, Utang, dan Jurnal.');
+            denyAccess($page, 'Petugas Keuangan & Akuntansi hanya berwenang mengakses modul Keuangan, Piutang, Utang, HPP, dan Jurnal.');
             break;
 
         case 'hr':

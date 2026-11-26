@@ -70,8 +70,17 @@ if (!function_exists('isNavActive')) {
             </a>
 
             <div class="smenu nav-section-title">2. PRODUKSI</div>
+            <a href="index.php?page=production/mps" class="nav-subitem <?= isNavActive($page, 'production/mps') ? 'active on' : '' ?>">
+                &bull; Jadwal Produksi (MPS)
+            </a>
+            <a href="index.php?page=production/mrp" class="nav-subitem <?= isNavActive($page, 'production/mrp') ? 'active on' : '' ?>">
+                &bull; Kebutuhan Material (MRP)
+            </a>
             <a href="index.php?page=production/orders" class="nav-subitem <?= isNavActive($page, 'production/orders') ? 'active on' : '' ?>">
                 &bull; Rencana &amp; Perintah Produksi
+            </a>
+            <a href="index.php?page=production/material_requisitions" class="nav-subitem <?= isNavActive($page, 'production/material_requisitions') ? 'active on' : '' ?>">
+                &bull; Permintaan Bahan (MR)
             </a>
             <a href="index.php?page=production/material_issues" class="nav-subitem <?= isNavActive($page, 'production/material_issues') ? 'active on' : '' ?>">
                 &bull; Pemakaian Bahan Baku
@@ -98,6 +107,9 @@ if (!function_exists('isNavActive')) {
             </a>
             <a href="index.php?page=expenditure_procurement/gr" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/gr') ? 'active on' : '' ?>">
                 &bull; Penerimaan Barang (GR)
+            </a>
+            <a href="index.php?page=expenditure_procurement/returns" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/returns') ? 'active on' : '' ?>">
+                &bull; Retur &amp; Nota Debit
             </a>
             <a href="index.php?page=expenditure_procurement/invoices" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/invoices') ? 'active on' : '' ?>">
                 &bull; Faktur Pemasok &amp; Utang
@@ -175,11 +187,20 @@ if (!function_exists('isNavActive')) {
             <a href="index.php?page=inventory/stock" class="nav-subitem <?= isNavActive($page, 'inventory/stock') ? 'active on' : '' ?>">
                 &bull; Saldo &amp; Mutasi Stok
             </a>
+            <a href="index.php?page=inventory/batches" class="nav-subitem <?= isNavActive($page, 'inventory/batches') ? 'active on' : '' ?>">
+                &bull; Monitoring Batch &amp; FEFO
+            </a>
+            <a href="index.php?page=inventory/traceability" class="nav-subitem <?= isNavActive($page, 'inventory/traceability') ? 'active on' : '' ?>">
+                &bull; Silsilah Produk (Traceability)
+            </a>
             <a href="index.php?page=reports/journals" class="nav-subitem <?= isNavActive($page, 'reports/journals') ? 'active on' : '' ?>">
                 &bull; Jurnal Umum Internal
             </a>
             <a href="index.php?page=reports/audit" class="nav-subitem <?= isNavActive($page, 'reports/audit') ? 'active on' : '' ?>">
                 &bull; Jejak Audit (Audit Trail)
+            </a>
+            <a href="index.php?page=reports/notifications" class="nav-subitem <?= isNavActive($page, 'reports/notifications') ? 'active on' : '' ?>">
+                &bull; Pusat Notifikasi
             </a>
             <a href="index.php?page=users/index" class="nav-subitem <?= isNavActive($page, 'users/index') ? 'active on' : '' ?>">
                 &bull; Pengguna &amp; Hak Akses
@@ -199,6 +220,12 @@ if (!function_exists('isNavActive')) {
             <a href="index.php?page=expenditure_procurement/gr" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/gr') ? 'active on' : '' ?>">
                 &bull; Penerimaan Barang (GR)
             </a>
+            <a href="index.php?page=expenditure_procurement/returns" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/returns') ? 'active on' : '' ?>">
+                &bull; Retur &amp; Nota Debit
+            </a>
+            <a href="index.php?page=production/mrp" class="nav-subitem <?= isNavActive($page, 'production/mrp') ? 'active on' : '' ?>">
+                &bull; Kebutuhan Material (MRP)
+            </a>
 
             <div class="smenu nav-section-title">DATA MASTER</div>
             <a href="index.php?page=master_data/suppliers" class="nav-subitem <?= isNavActive($page, 'master_data/suppliers') ? 'active on' : '' ?>">
@@ -207,14 +234,26 @@ if (!function_exists('isNavActive')) {
             <a href="index.php?page=master_data/items" class="nav-subitem <?= isNavActive($page, 'master_data/items') ? 'active on' : '' ?>">
                 &bull; Master Bahan Baku
             </a>
+            <a href="index.php?page=inventory/batches" class="nav-subitem <?= isNavActive($page, 'inventory/batches') ? 'active on' : '' ?>">
+                &bull; Monitoring Batch &amp; FEFO
+            </a>
 
         <!-- ============================================================== -->
         <!-- SIDEBAR ROLE: PPIC / PERENCANA PRODUKSI -->
         <!-- ============================================================== -->
         <?php elseif ($roleCode === 'ppic' || $roleCode === 'produksi'): ?>
             <div class="smenu nav-section-title">PRODUKSI &amp; PPIC</div>
+            <a href="index.php?page=production/mps" class="nav-subitem <?= isNavActive($page, 'production/mps') ? 'active on' : '' ?>">
+                &bull; Jadwal Produksi (MPS)
+            </a>
+            <a href="index.php?page=production/mrp" class="nav-subitem <?= isNavActive($page, 'production/mrp') ? 'active on' : '' ?>">
+                &bull; Kebutuhan Material (MRP)
+            </a>
             <a href="index.php?page=production/orders" class="nav-subitem <?= isNavActive($page, 'production/orders') ? 'active on' : '' ?>">
                 &bull; Perintah Produksi (SPK)
+            </a>
+            <a href="index.php?page=production/material_requisitions" class="nav-subitem <?= isNavActive($page, 'production/material_requisitions') ? 'active on' : '' ?>">
+                &bull; Permintaan Bahan (MR)
             </a>
             <a href="index.php?page=production/material_issues" class="nav-subitem <?= isNavActive($page, 'production/material_issues') ? 'active on' : '' ?>">
                 &bull; Pemakaian Bahan Baku
@@ -238,6 +277,12 @@ if (!function_exists('isNavActive')) {
             </a>
             <a href="index.php?page=inventory/stock" class="nav-subitem <?= isNavActive($page, 'inventory/stock') ? 'active on' : '' ?>">
                 &bull; Saldo &amp; Mutasi Stok
+            </a>
+            <a href="index.php?page=inventory/batches" class="nav-subitem <?= isNavActive($page, 'inventory/batches') ? 'active on' : '' ?>">
+                &bull; Monitoring Batch &amp; FEFO
+            </a>
+            <a href="index.php?page=inventory/traceability" class="nav-subitem <?= isNavActive($page, 'inventory/traceability') ? 'active on' : '' ?>">
+                &bull; Silsilah Produk (Traceability)
             </a>
 
         <!-- ============================================================== -->
@@ -280,6 +325,12 @@ if (!function_exists('isNavActive')) {
             <a href="index.php?page=inventory/stock" class="nav-subitem <?= isNavActive($page, 'inventory/stock') ? 'active on' : '' ?>">
                 &bull; Saldo &amp; Mutasi Stok
             </a>
+            <a href="index.php?page=inventory/batches" class="nav-subitem <?= isNavActive($page, 'inventory/batches') ? 'active on' : '' ?>">
+                &bull; Monitoring Batch &amp; FEFO
+            </a>
+            <a href="index.php?page=inventory/traceability" class="nav-subitem <?= isNavActive($page, 'inventory/traceability') ? 'active on' : '' ?>">
+                &bull; Silsilah Produk (Traceability)
+            </a>
             <a href="index.php?page=inventory/adjustments" class="nav-subitem <?= isNavActive($page, 'inventory/adjustments') ? 'active on' : '' ?>">
                 &bull; Penyesuaian Stok (Opname)
             </a>
@@ -287,6 +338,12 @@ if (!function_exists('isNavActive')) {
             <div class="smenu nav-section-title">LOGISTIK FISIK</div>
             <a href="index.php?page=expenditure_procurement/gr" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/gr') ? 'active on' : '' ?>">
                 &bull; Penerimaan Barang (GR)
+            </a>
+            <a href="index.php?page=production/material_requisitions" class="nav-subitem <?= isNavActive($page, 'production/material_requisitions') ? 'active on' : '' ?>">
+                &bull; Pengeluaran Bahan (MR)
+            </a>
+            <a href="index.php?page=expenditure_procurement/returns" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/returns') ? 'active on' : '' ?>">
+                &bull; Retur Barang Pemasok
             </a>
             <a href="index.php?page=receiving_sales/delivery_orders" class="nav-subitem <?= isNavActive($page, 'receiving_sales/delivery_orders') ? 'active on' : '' ?>">
                 &bull; Pengiriman Barang (DO)
@@ -314,6 +371,12 @@ if (!function_exists('isNavActive')) {
             <a href="index.php?page=expenditure_procurement/gr" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/gr') ? 'active on' : '' ?>">
                 &bull; Inspeksi Bahan Datang (GR)
             </a>
+            <a href="index.php?page=inventory/batches" class="nav-subitem <?= isNavActive($page, 'inventory/batches') ? 'active on' : '' ?>">
+                &bull; Karantina &amp; Batch FEFO
+            </a>
+            <a href="index.php?page=inventory/traceability" class="nav-subitem <?= isNavActive($page, 'inventory/traceability') ? 'active on' : '' ?>">
+                &bull; Silsilah Produk (Traceability)
+            </a>
 
             <div class="smenu nav-section-title">DATA REFERENSI</div>
             <a href="index.php?page=master_data/boms" class="nav-subitem <?= isNavActive($page, 'master_data/boms') ? 'active on' : '' ?>">
@@ -337,11 +400,17 @@ if (!function_exists('isNavActive')) {
             <a href="index.php?page=expenditure_procurement/invoices" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/invoices') ? 'active on' : '' ?>">
                 &bull; Faktur Pemasok &amp; Utang
             </a>
+            <a href="index.php?page=expenditure_procurement/returns" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/returns') ? 'active on' : '' ?>">
+                &bull; Nota Debit (Debit Memo)
+            </a>
             <a href="index.php?page=expenditure_procurement/payment_requests" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/payment_requests') ? 'active on' : '' ?>">
                 &bull; Permintaan Pembayaran
             </a>
             <a href="index.php?page=expenditure_procurement/payments" class="nav-subitem <?= isNavActive($page, 'expenditure_procurement/payments') ? 'active on' : '' ?>">
                 &bull; Pelunasan Pemasok
+            </a>
+            <a href="index.php?page=production/hpp_summary" class="nav-subitem <?= isNavActive($page, 'production/hpp_summary') ? 'active on' : '' ?>">
+                &bull; Biaya Produksi &amp; HPP
             </a>
 
             <div class="smenu nav-section-title">SDM &amp; PAYROLL</div>

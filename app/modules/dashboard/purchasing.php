@@ -65,12 +65,51 @@ $recentPoList = $db->query("
     LIMIT 4
 ")->fetchAll();
 
+// Tren Bulanan Belanja Pengadaan (6 Bulan)
+$monthlyPurchases = $db->query("
+    SELECT 
+        DATE_FORMAT(po_date, '%b %Y') AS month_label,
+        DATE_FORMAT(po_date, '%Y-%m') AS ym,
+        COALESCE(SUM(total_amount), 0) AS total_spent,
+        COUNT(id) AS total_orders
+    FROM purchase_orders
+    WHERE status NOT IN ('cancelled')
+    GROUP BY DATE_FORMAT(po_date, '%Y-%m'), DATE_FORMAT(po_date, '%b %Y')
+    ORDER BY ym ASC
+    LIMIT 6
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$purchLabels = json_encode(array_column($monthlyPurchases, 'month_label'));
+$purchSeries = json_encode(array_map(function($v) { return round($v / 1000000, 1); }, array_column($monthlyPurchases, 'total_spent')));
+
 $pageTitle = 'Dashboard Staff Pembelian';
 $breadcrumbSection = 'Pengeluaran';
-$appSubTitle = 'Sistem Informasi SDM dan Penggajian'; // As shown in the prototype brand-header
+$appSubTitle = 'Sistem Informasi Pengadaan & Pengeluaran';
 
 include __DIR__ . '/../../includes/dashboard_header.php';
 ?>
+
+<!-- Pintasan Alur Siklus Pengeluaran Mayora -->
+<div class="max-w-5xl mb-8 p-4 rounded-xl bg-white border border-gray-150 shadow-sm flex flex-wrap gap-2 items-center justify-between">
+  <div class="text-[12px] font-bold text-gray-700">Pusat Alur Pengadaan:</div>
+  <div class="flex flex-wrap gap-2">
+    <a href="index.php?page=expenditure_procurement/pr" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      📋 Permintaan Pembelian (PR)
+    </a>
+    <a href="index.php?page=expenditure_procurement/po" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      🛒 Pesanan Pembelian (PO)
+    </a>
+    <a href="index.php?page=expenditure_procurement/gr" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      📦 Penerimaan Barang (GR)
+    </a>
+    <a href="index.php?page=expenditure_procurement/returns" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      ↩️ Retur &amp; Nota Debit
+    </a>
+    <a href="index.php?page=production/mrp" class="px-3 py-1.5 rounded-md bg-[#EE2726] text-white text-[11px] font-semibold hover:bg-red-700 transition-colors">
+      ⚡ Cek Kebutuhan MRP &rarr;
+    </a>
+  </div>
+</div>
 
 <!-- Metrics Row 1: 3 Columns (Persis Prototype HTML) -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mb-12" data-purpose="metrics-summary">
@@ -113,12 +152,79 @@ include __DIR__ . '/../../includes/dashboard_header.php';
   </span>
 </div>
 
+<!-- Chart: Tren Belanja Pengadaan Bahan Baku -->
+<section class="max-w-5xl mb-12 bg-white rounded-xl border border-gray-150 p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-[14px] font-bold text-[#111827]">Tren Realisasi Belanja Pengadaan Bahan Baku (6 Bulan Terakhir)</h3>
+      <p class="text-[11.5px] text-[#687588]">Total nilai komitmen Purchase Order yang diterbitkan ke vendor (dalam Juta Rupiah)</p>
+    </div>
+    <span class="text-[11px] font-semibold text-[#EE2726] bg-red-50 px-2.5 py-1 rounded">
+      Siklus Pengeluaran
+    </span>
+  </div>
+  <div class="h-60 w-full">
+    <canvas id="purchSpendChart"></canvas>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('purchSpendChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: <?= $purchLabels ?>,
+        datasets: [{
+          label: 'Total Belanja',
+          data: <?= $purchSeries ?>,
+          borderColor: '#EE2726',
+          backgroundColor: 'rgba(238, 39, 38, 0.08)',
+          borderWidth: 2.5,
+          fill: true,
+          tension: 0.35,
+          pointRadius: 4,
+          pointBackgroundColor: '#EE2726'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(c) { return 'Belanja: Rp ' + c.parsed.y.toLocaleString('id-ID') + ' Juta'; }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              callback: function(v) { return 'Rp ' + v.toLocaleString('id-ID') + ' Jt'; }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
+
 <!-- BEGIN: ReturBerjalanTableSection (Persis Prototype HTML) -->
 <section class="max-w-5xl mb-14" data-purpose="retur-table-section">
   <!-- Section Header -->
-  <h3 class="text-[14px] font-bold text-[#111827] mb-5">
-    Retur Berjalan
-  </h3>
+  <div class="flex items-center justify-between mb-5">
+    <h3 class="text-[14px] font-bold text-[#111827]">
+      Retur Berjalan &amp; Nota Debit
+    </h3>
+    <a href="index.php?page=expenditure_procurement/returns" class="text-[11.5px] font-semibold text-[#EE2726] hover:underline">
+      Kelola Retur &amp; Nota Debit &rarr;
+    </a>
+  </div>
   <!-- Table Columns Headers -->
   <div class="w-full">
     <div class="grid grid-cols-6 gap-4 text-[12px] font-bold text-[#1e242b] pb-3 border-b border-gray-100">

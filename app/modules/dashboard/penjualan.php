@@ -24,7 +24,24 @@ $doActiveCount = (int)$db->query("SELECT COUNT(*) FROM delivery_orders WHERE sta
 $totalReceivables = (float)$db->query("SELECT COALESCE(SUM(balance), 0) FROM sales_invoices WHERE status IN ('issued', 'partially_paid', 'overdue')")->fetchColumn();
 
 // 5. Total Penerimaan Kas Terverifikasi
-$receiptsThisMonth = (float)$db->query("SELECT COALESCE(SUM(total_amount), 0) FROM customer_receipts WHERE status = 'verified'")->fetchColumn();
+$receiptsThisMonth = (float)$db->query("SELECT COALESCE(SUM(total_amount), 0) FROM customer_receipts WHERE status IN ('verified', 'posted')")->fetchColumn();
+
+// 6. Tren Omset Penjualan 6 Bulan
+$monthlySales = $db->query("
+    SELECT 
+        DATE_FORMAT(so_date, '%b %Y') AS month_label,
+        DATE_FORMAT(so_date, '%Y-%m') AS ym,
+        COALESCE(SUM(total_amount), 0) AS total_sales,
+        COUNT(id) AS total_orders
+    FROM sales_orders
+    WHERE status NOT IN ('cancelled')
+    GROUP BY DATE_FORMAT(so_date, '%Y-%m'), DATE_FORMAT(so_date, '%b %Y')
+    ORDER BY ym ASC
+    LIMIT 6
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$salesLabels = json_encode(array_column($monthlySales, 'month_label'));
+$salesSeries = json_encode(array_map(function($v) { return round($v / 1000000, 1); }, array_column($monthlySales, 'total_sales')));
 
 // Tabel Sales Orders Terbaru
 $recentOrders = $db->query("
@@ -66,6 +83,28 @@ $notifCount = $soPendingCount;
 include __DIR__ . '/../../includes/dashboard_header.php';
 ?>
 
+<!-- Pintasan Alur Siklus Penerimaan Mayora -->
+<div class="max-w-5xl mb-8 p-4 rounded-xl bg-white border border-gray-150 shadow-sm flex flex-wrap gap-2 items-center justify-between">
+  <div class="text-[12px] font-bold text-gray-700">Pusat Alur Penjualan:</div>
+  <div class="flex flex-wrap gap-2">
+    <a href="index.php?page=receiving_sales/sales_orders" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      🛒 Sales Orders (SO)
+    </a>
+    <a href="index.php?page=receiving_sales/delivery_orders" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      🚚 Surat Jalan (DO)
+    </a>
+    <a href="index.php?page=receiving_sales/invoices" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      📄 Faktur Penjualan
+    </a>
+    <a href="index.php?page=receiving_sales/receivables" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      💰 Piutang &amp; Penagihan
+    </a>
+    <a href="index.php?page=inventory/batches" class="px-3 py-1.5 rounded-md bg-[#EE2726] text-white text-[11px] font-semibold hover:bg-red-700 transition-colors">
+      🔍 Stok Batch Siap Kirim &rarr;
+    </a>
+  </div>
+</div>
+
 <!-- Metrics Row 1: 3 Columns -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mb-12" data-purpose="metrics-summary">
   <div class="flex flex-col">
@@ -83,7 +122,7 @@ include __DIR__ . '/../../includes/dashboard_header.php';
 </div>
 
 <!-- Metric Row 2: Piutang & Kas Masuk -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mb-14" data-purpose="finance-metrics">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mb-10" data-purpose="finance-metrics">
   <div class="flex flex-col">
     <p class="text-[14px] font-semibold text-[#1e242b] mb-4">Saldo Piutang Pelanggan</p>
     <span class="text-[30px] font-extrabold text-[#000000] tracking-tight leading-none"><?= formatRupiah($totalReceivables) ?></span>
@@ -93,6 +132,68 @@ include __DIR__ . '/../../includes/dashboard_header.php';
     <span class="text-[30px] font-extrabold text-[#000000] tracking-tight leading-none"><?= formatRupiah($receiptsThisMonth) ?></span>
   </div>
 </div>
+
+<!-- Chart: Tren Omset Penjualan 6 Bulan -->
+<section class="max-w-5xl mb-12 bg-white rounded-xl border border-gray-150 p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-[14px] font-bold text-[#111827]">Tren Omset Penjualan Produk Mayora (6 Bulan Terakhir)</h3>
+      <p class="text-[11.5px] text-[#687588]">Total realisasi nilai pesanan penjualan yang disetujui (dalam Juta Rupiah)</p>
+    </div>
+    <span class="text-[11px] font-semibold text-[#EE2726] bg-red-50 px-2.5 py-1 rounded">
+      Siklus Penerimaan
+    </span>
+  </div>
+  <div class="h-60 w-full">
+    <canvas id="salesRevChart"></canvas>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('salesRevChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: <?= $salesLabels ?>,
+        datasets: [{
+          label: 'Omset Penjualan',
+          data: <?= $salesSeries ?>,
+          borderColor: '#EE2726',
+          backgroundColor: 'rgba(238, 39, 38, 0.08)',
+          borderWidth: 2.5,
+          fill: true,
+          tension: 0.35,
+          pointRadius: 4,
+          pointBackgroundColor: '#EE2726'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(c) { return 'Omset: Rp ' + c.parsed.y.toLocaleString('id-ID') + ' Juta'; }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              callback: function(v) { return 'Rp ' + v.toLocaleString('id-ID') + ' Jt'; }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
 
 <!-- BEGIN: Tabel Pesanan Penjualan (SO) -->
 <section class="max-w-5xl mb-14" data-purpose="so-table-section">

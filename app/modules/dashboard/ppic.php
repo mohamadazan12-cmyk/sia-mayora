@@ -57,6 +57,23 @@ $recentOutputs = $db->query("
     LIMIT 4
 ")->fetchAll();
 
+// Tren Bulanan Output Produksi (6 Bulan)
+$monthlyProd = $db->query("
+    SELECT 
+        DATE_FORMAT(output_date, '%b %Y') AS month_label,
+        DATE_FORMAT(output_date, '%Y-%m') AS ym,
+        COALESCE(SUM(qty_good), 0) AS total_good,
+        COALESCE(SUM(qty_scrap), 0) AS total_scrap
+    FROM production_outputs
+    GROUP BY DATE_FORMAT(output_date, '%Y-%m'), DATE_FORMAT(output_date, '%b %Y')
+    ORDER BY ym ASC
+    LIMIT 6
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$prodLabels = json_encode(array_column($monthlyProd, 'month_label'));
+$goodSeries = json_encode(array_map('floatval', array_column($monthlyProd, 'total_good')));
+$scrapSeries = json_encode(array_map('floatval', array_column($monthlyProd, 'total_scrap')));
+
 $pageTitle = 'Dashboard Produksi & PPIC';
 $breadcrumbSection = 'Produksi';
 $appSubTitle = 'Sistem Informasi Produksi & PPIC';
@@ -64,6 +81,28 @@ $notifCount = $spkPending;
 
 include __DIR__ . '/../../includes/dashboard_header.php';
 ?>
+
+<!-- Pintasan Alur Siklus Manufaktur Mayora -->
+<div class="max-w-5xl mb-8 p-4 rounded-xl bg-white border border-gray-150 shadow-sm flex flex-wrap gap-2 items-center justify-between">
+  <div class="text-[12px] font-bold text-gray-700">Pusat Alur Produksi:</div>
+  <div class="flex flex-wrap gap-2">
+    <a href="index.php?page=production/mps" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      📅 Jadwal Induk (MPS)
+    </a>
+    <a href="index.php?page=production/mrp" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      ⚡ Kalkulator MRP &amp; Auto-PR
+    </a>
+    <a href="index.php?page=production/material_requisitions" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      📦 Permintaan Bahan (MR)
+    </a>
+    <a href="index.php?page=inventory/batches" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      ⏳ Monitoring FEFO
+    </a>
+    <a href="index.php?page=inventory/traceability" class="px-3 py-1.5 rounded-md bg-[#EE2726] text-white text-[11px] font-semibold hover:bg-red-700 transition-colors">
+      🔍 Traceability Produk &rarr;
+    </a>
+  </div>
+</div>
 
 <!-- Metrics Row 1: 3 Columns -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mb-12" data-purpose="metrics-summary">
@@ -82,13 +121,85 @@ include __DIR__ . '/../../includes/dashboard_header.php';
 </div>
 
 <!-- Metric Row 2: Capaian Output Target -->
-<div class="max-w-4xl mb-14" data-purpose="single-metric">
+<div class="max-w-4xl mb-10" data-purpose="single-metric">
   <p class="text-[14px] font-semibold text-[#1e242b] mb-4">Realisasi Output Produksi</p>
   <div class="flex items-baseline gap-3">
     <span class="text-[34px] font-extrabold text-[#000000] tracking-tight leading-none"><?= $achievePct ?>%</span>
     <span class="text-[12px] text-[#687588]">(<?= number_format($actualTotal) ?> dari <?= number_format($targetTotal) ?> target)</span>
   </div>
 </div>
+
+<!-- Chart: Tren Realisasi Output & Scrap -->
+<section class="max-w-5xl mb-12 bg-white rounded-xl border border-gray-150 p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-[14px] font-bold text-[#111827]">Tren Realisasi Output Pabrikasi (6 Bulan Terakhir)</h3>
+      <p class="text-[11.5px] text-[#687588]">Volume barang jadi lulus uji (Good) vs produk afkir/gagal spesifikasi (Scrap)</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#15803d] inline-block"></span> Lulus Standar (Good)
+      </span>
+      <span class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#EE2726] inline-block"></span> Scrap / Afkir
+      </span>
+    </div>
+  </div>
+  <div class="h-60 w-full">
+    <canvas id="ppicProdChart"></canvas>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('ppicProdChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: <?= $prodLabels ?>,
+        datasets: [
+          {
+            label: 'Output Lulus (Good)',
+            data: <?= $goodSeries ?>,
+            backgroundColor: '#15803d',
+            borderRadius: 4,
+            barPercentage: 0.6
+          },
+          {
+            label: 'Scrap Afkir',
+            data: <?= $scrapSeries ?>,
+            backgroundColor: '#EE2726',
+            borderRadius: 4,
+            barPercentage: 0.6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(c) { return c.dataset.label + ': ' + c.parsed.y.toLocaleString('id-ID') + ' Dus/Unit'; }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              callback: function(v) { return v.toLocaleString('id-ID'); }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
 
 <!-- BEGIN: Tabel Perintah Produksi (SPK) -->
 <section class="max-w-5xl mb-14" data-purpose="spk-table-section">

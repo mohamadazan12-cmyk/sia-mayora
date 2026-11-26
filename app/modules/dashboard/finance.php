@@ -18,10 +18,33 @@ $totalAr = (float)$db->query("SELECT COALESCE(SUM(balance), 0) FROM sales_invoic
 $totalAp = (float)$db->query("SELECT COALESCE(SUM(balance), 0) FROM supplier_invoices WHERE status IN ('verified', 'matched', 'partially_paid')")->fetchColumn();
 
 // 3. Total Penerimaan Kas Pelanggan Terverifikasi
-$totalCashIn = (float)$db->query("SELECT COALESCE(SUM(total_amount), 0) FROM customer_receipts WHERE status = 'verified'")->fetchColumn();
+$totalCashIn = (float)$db->query("SELECT COALESCE(SUM(total_amount), 0) FROM customer_receipts WHERE status IN ('verified', 'posted')")->fetchColumn();
 
 // 4. Total Pengeluaran Kas Bayar Pemasok
-$totalCashOut = (float)$db->query("SELECT COALESCE(SUM(amount), 0) FROM supplier_payments WHERE status = 'verified'")->fetchColumn();
+$totalCashOut = (float)$db->query("SELECT COALESCE(SUM(amount), 0) FROM supplier_payments WHERE status IN ('verified', 'posted')")->fetchColumn();
+
+// 5. Tren Arus Kas Bulanan (6 Bulan)
+$monthlyCashflow = $db->query("
+    SELECT 
+        DATE_FORMAT(sp.payment_date, '%b %Y') AS month_label,
+        DATE_FORMAT(sp.payment_date, '%Y-%m') AS ym,
+        COALESCE(SUM(sp.amount), 0) AS cash_out,
+        (
+            SELECT COALESCE(SUM(cr.total_amount), 0) 
+            FROM customer_receipts cr 
+            WHERE DATE_FORMAT(cr.receipt_date, '%Y-%m') = DATE_FORMAT(sp.payment_date, '%Y-%m')
+              AND cr.status IN ('verified', 'posted')
+        ) AS cash_in
+    FROM supplier_payments sp
+    WHERE sp.status IN ('verified', 'posted')
+    GROUP BY DATE_FORMAT(sp.payment_date, '%Y-%m'), DATE_FORMAT(sp.payment_date, '%b %Y')
+    ORDER BY ym ASC
+    LIMIT 6
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$cfLabels = json_encode(array_column($monthlyCashflow, 'month_label'));
+$cfInSeries = json_encode(array_map(function($v) { return round($v / 1000000, 1); }, array_column($monthlyCashflow, 'cash_in')));
+$cfOutSeries = json_encode(array_map(function($v) { return round($v / 1000000, 1); }, array_column($monthlyCashflow, 'cash_out')));
 
 // Status Keseimbangan Jurnal Akuntansi
 $journalTotals = $db->query("
@@ -116,6 +139,78 @@ include __DIR__ . '/../../includes/dashboard_header.php';
     Buku Jurnal &rarr;
   </a>
 </div>
+
+<!-- Chart: Tren Arus Kas Masuk vs Kas Keluar -->
+<section class="max-w-5xl mb-12 bg-white rounded-xl border border-gray-150 p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-[14px] font-bold text-[#111827]">Tren Arus Kas Keuangan (6 Bulan Terakhir)</h3>
+      <p class="text-[11.5px] text-[#687588]">Penerimaan kas dari pelanggan (Cash In) vs Pengeluaran kas pelunasan vendor (Cash Out) dalam Juta Rupiah</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#15803d] inline-block"></span> Kas Masuk (In)
+      </span>
+      <span class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#EE2726] inline-block"></span> Kas Keluar (Out)
+      </span>
+    </div>
+  </div>
+  <div class="h-64 w-full">
+    <canvas id="financeCashflowChart"></canvas>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('financeCashflowChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: <?= $cfLabels ?>,
+        datasets: [
+          {
+            label: 'Kas Masuk (In)',
+            data: <?= $cfInSeries ?>,
+            backgroundColor: '#15803d',
+            borderRadius: 4,
+            barPercentage: 0.6
+          },
+          {
+            label: 'Kas Keluar (Out)',
+            data: <?= $cfOutSeries ?>,
+            backgroundColor: '#EE2726',
+            borderRadius: 4,
+            barPercentage: 0.6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(c) { return c.dataset.label + ': Rp ' + c.parsed.y.toLocaleString('id-ID') + ' Juta'; }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              callback: function(v) { return 'Rp ' + v.toLocaleString('id-ID') + ' Jt'; }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
 
 <!-- Quick Actions: Otorisasi SDM & Payroll Finance -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mb-12">

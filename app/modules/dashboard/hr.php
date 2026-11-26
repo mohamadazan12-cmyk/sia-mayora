@@ -80,6 +80,19 @@ $recentEmployees = $db->query("
     LIMIT 4
 ")->fetchAll();
 
+// Distribusi Karyawan per Departemen
+$deptDistribution = $db->query("
+    SELECT d.name AS dept_name, COUNT(e.id) AS emp_count
+    FROM departments d
+    LEFT JOIN employees e ON e.department_id = d.id AND e.status = 'active'
+    GROUP BY d.id, d.name
+    HAVING emp_count > 0
+    ORDER BY emp_count DESC
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$deptLabels = json_encode(array_column($deptDistribution, 'dept_name'));
+$deptSeries = json_encode(array_map('intval', array_column($deptDistribution, 'emp_count')));
+
 $pageTitle = 'Dashboard SDM & Penggajian';
 $breadcrumbSection = 'SDM & Penggajian';
 $appSubTitle = 'Sistem Informasi SDM dan Penggajian';
@@ -87,6 +100,28 @@ $notifCount = $pendingLeaves + $pendingPayroll;
 
 include __DIR__ . '/../../includes/dashboard_header.php';
 ?>
+
+<!-- Pintasan Siklus SDM & Payroll Mayora -->
+<div class="max-w-5xl mb-8 p-4 rounded-xl bg-white border border-gray-150 shadow-sm flex flex-wrap gap-2 items-center justify-between">
+  <div class="text-[12px] font-bold text-gray-700">Pusat SDM &amp; Penggajian:</div>
+  <div class="flex flex-wrap gap-2">
+    <a href="index.php?page=hr_payroll/employees" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      👥 Data Karyawan
+    </a>
+    <a href="index.php?page=hr_payroll/attendance" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      🕒 Presensi Kerja
+    </a>
+    <a href="index.php?page=hr_payroll/leave_overtime" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      📅 Cuti &amp; Lembur
+    </a>
+    <a href="index.php?page=hr_payroll/payroll_process" class="px-3 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:border-red-400 hover:text-[#EE2726] transition-colors">
+      💰 Hitung Payroll
+    </a>
+    <a href="index.php?page=hr_payroll/salary_verification" class="px-3 py-1.5 rounded-md bg-[#EE2726] text-white text-[11px] font-semibold hover:bg-red-700 transition-colors">
+      📋 Verifikasi Slip Gaji &rarr;
+    </a>
+  </div>
+</div>
 
 <!-- Metrics Row 1: 3 Columns -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mb-12" data-purpose="metrics-summary">
@@ -105,10 +140,69 @@ include __DIR__ . '/../../includes/dashboard_header.php';
 </div>
 
 <!-- Metric Row 2: Beban Gaji Periode Terakhir -->
-<div class="max-w-4xl mb-14" data-purpose="single-metric">
+<div class="max-w-4xl mb-10" data-purpose="single-metric">
   <p class="text-[14px] font-semibold text-[#1e242b] mb-4">Realisasi Beban Gaji Terakhir</p>
   <span class="text-[34px] font-extrabold text-[#000000] tracking-tight leading-none"><?= formatRupiah($latestPayrollTotal) ?></span>
 </div>
+
+<!-- Chart: Distribusi Karyawan per Departemen -->
+<section class="max-w-5xl mb-12 bg-white rounded-xl border border-gray-150 p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-[14px] font-bold text-[#111827]">Komposisi Tenaga Kerja per Departemen Manufaktur</h3>
+      <p class="text-[11.5px] text-[#687588]">Distribusi jumlah karyawan aktif di seluruh lini operasional pabrik dan kantor</p>
+    </div>
+    <span class="text-[11px] font-semibold text-[#EE2726] bg-red-50 px-2.5 py-1 rounded">
+      Total: <?= $totalEmployees ?> SDM
+    </span>
+  </div>
+  <div class="h-60 w-full">
+    <canvas id="hrDeptChart"></canvas>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('hrDeptChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: <?= $deptLabels ?>,
+        datasets: [{
+          label: 'Jumlah Karyawan',
+          data: <?= $deptSeries ?>,
+          backgroundColor: '#EE2726',
+          borderRadius: 4,
+          barPercentage: 0.5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(c) { return 'Karyawan: ' + c.parsed.y + ' Orang'; }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              stepSize: 10,
+              callback: function(v) { return v + ' Orang'; }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
 
 <!-- Quick Access / SDM Action Cards (Mayora SISP Integration) -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mb-10">

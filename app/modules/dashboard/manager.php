@@ -67,6 +67,29 @@ usort($approvalQueue, function($a, $b) {
 
 $totalPendingApprovals = count($approvalQueue);
 
+// Tren Kinerja Manajerial 6 Bulan (Omset Penjualan vs Belanja Pengadaan)
+$execTrends = $db->query("
+    SELECT 
+        DATE_FORMAT(so.so_date, '%b %Y') AS month_label,
+        DATE_FORMAT(so.so_date, '%Y-%m') AS ym,
+        COALESCE(SUM(so.total_amount), 0) AS revenue,
+        (
+            SELECT COALESCE(SUM(po.total_amount), 0)
+            FROM purchase_orders po
+            WHERE DATE_FORMAT(po.po_date, '%Y-%m') = DATE_FORMAT(so.so_date, '%Y-%m')
+              AND po.status NOT IN ('cancelled')
+        ) AS expenses
+    FROM sales_orders so
+    WHERE so.status NOT IN ('cancelled')
+    GROUP BY DATE_FORMAT(so.so_date, '%Y-%m'), DATE_FORMAT(so.so_date, '%b %Y')
+    ORDER BY ym ASC
+    LIMIT 6
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$execLabels = json_encode(array_column($execTrends, 'month_label'));
+$execRevSeries = json_encode(array_map(function($v) { return round($v / 1000000, 1); }, array_column($execTrends, 'revenue')));
+$execExpSeries = json_encode(array_map(function($v) { return round($v / 1000000, 1); }, array_column($execTrends, 'expenses')));
+
 // Aktivitas Audit & Operasional Terkini
 $recentAudit = $db->query("
     SELECT al.id, al.action, al.entity_type, al.new_values AS notes, al.created_at, u.full_name AS user_name
@@ -107,6 +130,86 @@ include __DIR__ . '/../../includes/dashboard_header.php';
     <span class="text-[11px] text-[#687588] mt-2">Sumber daya aktif</span>
   </div>
 </div>
+
+<!-- Chart: Tren Kinerja Eksekutif -->
+<section class="max-w-5xl mb-12 bg-white rounded-xl border border-gray-150 p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-[14px] font-bold text-[#111827]">Tren Kinerja Eksekutif Perusahaan (6 Bulan Terakhir)</h3>
+      <p class="text-[11.5px] text-[#687588]">Perbandingan total omset penjualan pesanan vs belanja komitmen pengadaan (dalam Juta Rupiah)</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#EE2726] inline-block"></span> Penjualan
+      </span>
+      <span class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-700">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#3b82f6] inline-block"></span> Pengadaan
+      </span>
+    </div>
+  </div>
+  <div class="h-60 w-full">
+    <canvas id="managerExecChart"></canvas>
+  </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('managerExecChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: <?= $execLabels ?>,
+        datasets: [
+          {
+            label: 'Penjualan',
+            data: <?= $execRevSeries ?>,
+            borderColor: '#EE2726',
+            backgroundColor: 'rgba(238, 39, 38, 0.08)',
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            pointBackgroundColor: '#EE2726'
+          },
+          {
+            label: 'Pengadaan',
+            data: <?= $execExpSeries ?>,
+            borderColor: '#3b82f6',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            fill: false,
+            tension: 0.35,
+            pointRadius: 4,
+            pointBackgroundColor: '#3b82f6'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(c) { return c.dataset.label + ': Rp ' + c.parsed.y.toLocaleString('id-ID') + ' Juta'; }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              callback: function(v) { return 'Rp ' + v.toLocaleString('id-ID') + ' Jt'; }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
 
 <!-- Otorisasi SDM & Personalia (SISP Mayora Integration) -->
 <div class="max-w-5xl mb-10">

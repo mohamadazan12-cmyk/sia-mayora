@@ -211,6 +211,14 @@ include __DIR__ . '/../../includes/header.php';
             Referensi Dokumen: PO <a href="index.php?page=expenditure_procurement/po_detail&id=<?= $inv['purchase_order_id'] ?>"><strong><?= e($inv['po_number']) ?></strong></a>
             &bull; GR <a href="index.php?page=expenditure_procurement/gr_detail&id=<?= $inv['goods_receipt_id'] ?>"><strong><?= e($inv['gr_number']) ?></strong></a>
         </div>
+        <?php if ($inv['match_status'] !== 'matched' || (float)$inv['balance'] > 0): ?>
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; color: #64748b;">Ada selisih harga/kuantitas atau barang retur vendor?</span>
+                <a href="index.php?page=expenditure_procurement/returns" class="btn btn-sm btn-outline-danger" style="font-size: 11.5px; text-decoration: none; padding: 4px 10px; border-radius: 4px; border: 1px solid #dc2626; color: #dc2626;">
+                    📄 Terbitkan Nota Debit (Debit Memo) &rarr;
+                </a>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 
